@@ -3,6 +3,11 @@
 ## Overview
 BB_MA_EA is an **Expert Advisor (EA) for MetaTrader 4 (MT4)** that implements a trading strategy based on **Bollinger Bands** and **Moving Average crossovers**. The EA determines trade signals using Bollinger Bands and Moving Average strategies and manages trade execution with risk management settings.
 
+## Things to do
+1. 
+2. 
+3. 
+
 ## Features
 - Uses **Bollinger Bands** to identify price breakouts.
 - Implements a **Fast & Slow Moving Average crossover strategy**.
