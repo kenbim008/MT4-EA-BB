@@ -140,7 +140,7 @@ int getTrend(){
     average += middleBand[i];
   }
   average = average/BackTrack;
-  if(average>middleBand[0])
+  if(average>middleBand[BackTrack])
     return 1;
   else return 0;
   
