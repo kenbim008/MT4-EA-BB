@@ -18,6 +18,7 @@ input int TakeProfit = 100;                // Take profit in points
 input long AllowedAccountNumber = 0;       // Allowed account number (0 = any account)
 input int MaxTradesPerCandleBuy = 1;       // Maximum buy trades per candle
 input int MaxTradesPerCandleSell = 1;      // Maximum sell trades per candle
+input int BackTrack = 10;                  // How many candles to consider for average trend 
 
 // Global variables
 int LastCrossDirection = 0;                // 0 = No cross, 1 = Up, -1 = Down
@@ -88,14 +89,14 @@ void OnTick()
    bool MA_SellSignal = (FastMA < SlowMA);
 
    // Execute trades only if both strategies agree
-   if (BB_BuySignal && MA_BuySignal && BuyTradesThisCandle < MaxTradesPerCandleBuy)
+   if (BB_BuySignal && MA_BuySignal && BuyTradesThisCandle < MaxTradesPerCandleBuy && getTrend())
      {
       // Price crossed middle band going up and Fast MA is above Slow MA
       LastCrossDirection = 1;
       OpenTrade(OP_BUY);
       BuyTradesThisCandle++; // Increment buy trade counter
      }
-   else if (BB_SellSignal && MA_SellSignal && SellTradesThisCandle < MaxTradesPerCandleSell)
+   else if (BB_SellSignal && MA_SellSignal && SellTradesThisCandle < MaxTradesPerCandleSell && getTrend() == 0)
      {
       // Price crossed middle band going down and Fast MA is below Slow MA
       LastCrossDirection = -1;
@@ -130,3 +131,17 @@ void OpenTrade(int OrderType)
      }
   }
 //+------------------------------------------------------------------+
+
+int getTrend(){
+  double middleBand[100];
+  double average = 0;
+  for (int i = 0; i<BackTrack; i++){
+    middleBand[i] = iBands(NULL, 0, BBPeriod, BBDeviation, 0, PRICE_CLOSE, MODE_MAIN, i);
+    average += middleBand[i];
+  }
+  average = average/BackTrack;
+  if(average>middleBand[0])
+    return 1;
+  else return 0;
+  
+}
