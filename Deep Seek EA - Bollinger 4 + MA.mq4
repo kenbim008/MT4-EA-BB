@@ -143,5 +143,5 @@ int getTrend(){
   if(average>middleBand[BackTrack-1])
     return 1;
   else return 0;
-  
+   
 }
