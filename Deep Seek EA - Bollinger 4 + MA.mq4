@@ -229,7 +229,7 @@ void CreateTradeDurationLabels()
         ObjectSetInteger(0, "LabelsBox", OBJPROP_YDISTANCE, 15); // Y distance from the chart
         ObjectSetInteger(0, "LabelsBox", OBJPROP_XSIZE, 200); // Width of the box
         ObjectSetInteger(0, "LabelsBox", OBJPROP_YSIZE, 150); // Height of the box
-        ObjectSetInteger(0, "LabelsBox", OBJPROP_COLOR, clrGrey); // Set the box color to grey
+        ObjectSetInteger(0, "LabelsBox", OBJPROP_COLOR, C'125,125,125'); // Set the box color to grey
         ObjectSetInteger(0, "LabelsBox", OBJPROP_BORDER_TYPE, BORDER_FLAT); // Flat border
     }
 
