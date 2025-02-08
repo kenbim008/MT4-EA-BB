@@ -25,6 +25,12 @@ int LastCrossDirection = 0;                // 0 = No cross, 1 = Up, -1 = Down
 datetime LastTradeTime = 0;                // Time of the last candle
 int BuyTradesThisCandle = 0;               // Number of buy trades executed this candle
 int SellTradesThisCandle = 0;              // Number of sell trades executed this candle
+int wTradeDuration = 0;                    // Average time for a winning trade
+int lTadeDuration = 0;                     // Average time for a Loosing trade
+int numWinTrades = 0;                      // Total profitable trades made 
+int numLosTrades = 0;                      // Total negative trades made 
+bool timerStarted = false;
+#define DEBUG  0
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -32,12 +38,15 @@ int SellTradesThisCandle = 0;              // Number of sell trades executed thi
 int OnInit()
   {
    // Check if the EA is allowed to run on this account
-   if (AllowedAccountNumber != 0 && AccountNumber() != AllowedAccountNumber)
-     {
+    if (AllowedAccountNumber != 0 && AccountNumber() != AllowedAccountNumber)
+      {
       Alert("EA is not allowed to run on this account. Allowed account: ", AllowedAccountNumber);
       return(INIT_FAILED);
-     }
-   return(INIT_SUCCEEDED);
+      }
+      if (DEBUG){
+        CreateTradeDurationLabels();
+      }
+    return(INIT_SUCCEEDED);
   }
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                 |
@@ -144,4 +153,122 @@ int getTrend(){
     return 1;
   else return 0;
    
+}
+
+//+------------------------------------------------------------------+
+//| Handles trade transactions                                       |
+//+------------------------------------------------------------------+
+void OnTradeTransaction(const MqlTradeTransaction& trans, const MqlTradeRequest& request, const MqlTradeResult& result)
+{
+    // Check if the transaction type is a closed order
+    if (trans.type == TRADE_TRANSACTION_DEAL_ADD && (trans.deal_type == DEAL_TYPE_SELL || trans.deal_type == DEAL_TYPE_BUY))
+    {
+        if (trans.entry == DEAL_ENTRY_OUT) {// Ensure it's a closed trade
+          Print("Trade closed. Ticket: ", trans.position);
+          
+          // Call function to calculate trade duration
+          int duration = CalculateTradeDuration(trans);
+          int tradeTime;
+          if (trans.profit > 0) {
+            tradeTime = wTradeDuration*numWinTrades + duration;
+            numWinTrades += 1;
+            wTradeDuration = tradeTime/numWinTrades;
+          }
+          else {
+            tradeTime = lTradeDuration*numLosTrades + duration;
+            numLosTrades += 1;
+            lTradeDuration = tradeTime/numLosTrades;
+          }
+          if(DEBUG){
+            UpdateTradeDurationDisplay();
+          }
+          if (!timerStarted && (numWinTrades + numLossTrades) >= 10){
+            Print("Starting Timer for ", wTradeDuration, " seconds");
+            EventSetTimer(wTradeDuration);  // Start the timer
+            timerStarted = true;
+          }  
+        }
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Function to calculate the time in seconds between open & close   |
+//+------------------------------------------------------------------+
+int CalculateTradeDuration(const MqlTradeTransaction& trans)
+{
+    ulong dealTicket = trans.position; // Get the trade position ID
+
+    // Search for the corresponding open trade in history
+    if (HistoryDealSelect(trans.deal)) 
+    {
+        datetime openTime = HistoryDealGetInteger(trans.deal, DEAL_TIME);
+        datetime closeTime = trans.time;
+
+        int durationInSeconds = int(closeTime - openTime);
+        return durationInSeconds;
+    }
+    else
+    {
+        Print("Error retrieving trade history for ticket: ", trans.position);
+        return 0;
+    }
+}
+
+void CreateTradeDurationLabels()
+{
+    // Winning Trade Duration Label
+    if (ObjectFind("WinDurationLabel") < 0)
+    {
+        ObjectCreate(0, "WinDurationLabel", OBJ_LABEL, 0, 0, 0);
+        ObjectSetInteger(0, "WinDurationLabel", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+        ObjectSetInteger(0, "WinDurationLabel", OBJPROP_XDISTANCE, 10);
+        ObjectSetInteger(0, "WinDurationLabel", OBJPROP_YDISTANCE, 20);
+        ObjectSetInteger(0, "WinDurationLabel", OBJPROP_COLOR, clrGreen);
+        ObjectSetInteger(0, "WinDurationLabel", OBJPROP_FONTSIZE, 12);
+    }
+
+    // Losing Trade Duration Label
+    if (ObjectFind("LossDurationLabel") < 0)
+    {
+        ObjectCreate(0, "LossDurationLabel", OBJ_LABEL, 0, 0, 0);
+        ObjectSetInteger(0, "LossDurationLabel", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+        ObjectSetInteger(0, "LossDurationLabel", OBJPROP_XDISTANCE, 10);
+        ObjectSetInteger(0, "LossDurationLabel", OBJPROP_YDISTANCE, 40);
+        ObjectSetInteger(0, "LossDurationLabel", OBJPROP_COLOR, clrRed);
+        ObjectSetInteger(0, "LossDurationLabel", OBJPROP_FONTSIZE, 12);
+    }
+}
+
+
+void UpdateTradeDurationDisplay()
+{
+    ObjectSetString(0, "WinDurationLabel", OBJPROP_TEXT, "Winning Trade Duration: " + IntegerToString(wTradeDuration) + " sec");
+    ObjectSetString(0, "LossDurationLabel", OBJPROP_TEXT, "Losing Trade Duration: " + IntegerToString(lTradeDuration) + " sec");
+}
+
+
+//+------------------------------------------------------------------+
+//| Close Loosing trades that have been open for "too long"          |
+//+------------------------------------------------------------------+
+void OnTimer()
+{
+    Print("Timer expired. Checking for long open trades...");
+
+    for (int i = OrdersTotal() - 1; i >= 0; i--)
+    {
+        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+        {
+            datetime openTime = OrderOpenTime();
+            int tradeAge = TimeCurrent() - openTime;
+            if (tradeAge > wTradeDuration*2) // Trade has been open longer than wTradeDuration
+            {
+                Print("Closing trade: ", OrderTicket(), " Open for: ", tradeAge, " seconds");
+                CloseTrade(OrderTicket());
+            }
+        }
+    }
+    
+    // Stop the timer to avoid repeated execution
+    EventKillTimer();
+    timerStarted = false;
 }
