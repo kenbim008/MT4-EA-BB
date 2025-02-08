@@ -77,6 +77,8 @@ void OnTick()
       BuyTradesThisCandle = 0;
       SellTradesThisCandle = 0;
       LastTradeTime = CurrentCandleTime;
+      Print("NumWinTrades: ", numWinTrades);
+      Print("NumLossTrades: ", numLosTrades);
      }
 
    // Get Bollinger Bands values
