@@ -4,7 +4,7 @@
 //|                                                                  |
 //+------------------------------------------------------------------+
 #property strict
-#include MQH
+
 
 // Input parameters
 input double LotSize = 0.1;                // Lot size
