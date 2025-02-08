@@ -26,12 +26,12 @@ datetime LastTradeTime = 0;                // Time of the last candle
 int BuyTradesThisCandle = 0;               // Number of buy trades executed this candle
 int SellTradesThisCandle = 0;              // Number of sell trades executed this candle
 int wTradeDuration = 0;                    // Average time for a winning trade
-int lTadeDuration = 0;                     // Average time for a Loosing trade
+int lTradeDuration = 0;                     // Average time for a Loosing trade
 int numWinTrades = 0;                      // Total profitable trades made 
 int numLosTrades = 0;                      // Total negative trades made 
 bool timerStarted = false;
 
-#define DEBUG  0
+#define DEBUG  1
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -240,7 +240,7 @@ void CreateTradeDurationLabels()
         // Set label properties
         ObjectSetInteger(0, "LossDurationLabel", OBJPROP_XDISTANCE, 10);
         ObjectSetInteger(0, "LossDurationLabel", OBJPROP_YDISTANCE, 40);
-        ObjectSetInteger(0, "LossDurationLabel", OBJPROP_COLOR, clrRed); // Red color for losing duration
+        ObjectSetInteger(0, "LossDurationLabel", OBJPROP_COLOR, clrRed); // clrRed color for losing duration
         ObjectSetInteger(0, "LossDurationLabel", OBJPROP_FONTSIZE, 12);
         ObjectSetString(0, "LossDurationLabel", OBJPROP_TEXT, "Losing Trade Duration: 0 sec");
     }
@@ -266,7 +266,7 @@ void OnTimer()
         if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
         {
             datetime openTime = OrderOpenTime();
-            int tradeAge = TimeCurrent() - openTime;
+            int tradeAge = int(TimeCurrent() - openTime); // Explicitly cast the result to int (seconds)
             if (tradeAge > wTradeDuration*2) // Trade has been open longer than wTradeDuration
             {
                 Print("Closing trade: ", OrderTicket(), " Open for: ", tradeAge, " seconds");
