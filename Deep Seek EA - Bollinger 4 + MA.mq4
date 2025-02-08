@@ -4,6 +4,7 @@
 //|                                                                  |
 //+------------------------------------------------------------------+
 #property strict
+#include MQH
 
 // Input parameters
 input double LotSize = 0.1;                // Lot size
@@ -217,6 +218,21 @@ int CalculateTradeDuration(int ticket)
 
 void CreateTradeDurationLabels()
 {
+    // Create a Grey Box to hold all labels
+    if (ObjectFind("LabelsBox") == -1) // Check if the box exists
+    {
+        // Create the grey box if it doesn't exist
+        ObjectCreate("LabelsBox", OBJ_RECTANGLE_LABEL, 0, 0, 0);
+        
+        // Set the box properties
+        ObjectSetInteger(0, "LabelsBox", OBJPROP_XDISTANCE, 5); // X distance from the chart
+        ObjectSetInteger(0, "LabelsBox", OBJPROP_YDISTANCE, 15); // Y distance from the chart
+        ObjectSetInteger(0, "LabelsBox", OBJPROP_XSIZE, 200); // Width of the box
+        ObjectSetInteger(0, "LabelsBox", OBJPROP_YSIZE, 150); // Height of the box
+        ObjectSetInteger(0, "LabelsBox", OBJPROP_COLOR, clrGrey); // Set the box color to grey
+        ObjectSetInteger(0, "LabelsBox", OBJPROP_BORDER_TYPE, BORDER_FLAT); // Flat border
+    }
+
     // Winning Trade Duration Label
     if (ObjectFind("WinDurationLabel") == -1) // Check if label exists
     {
@@ -244,6 +260,34 @@ void CreateTradeDurationLabels()
         ObjectSetInteger(0, "LossDurationLabel", OBJPROP_FONTSIZE, 12);
         ObjectSetString(0, "LossDurationLabel", OBJPROP_TEXT, "Losing Trade Duration: 0 sec");
     }
+
+    // Winning Trades
+    if (ObjectFind("WinTradeLabel") == -1) // Check if label exists
+    {
+        // Create the label if it doesn't exist
+        ObjectCreate("WinTradeLabel", OBJ_LABEL, 0, 0, 0);
+        
+        // Set label properties
+        ObjectSetInteger(0, "WinTradeLabel", OBJPROP_XDISTANCE, 10);
+        ObjectSetInteger(0, "WinTradeLabel", OBJPROP_YDISTANCE, 60);
+        ObjectSetInteger(0, "WinTradeLabel", OBJPROP_COLOR, C'21,65,210'); 
+        ObjectSetInteger(0, "WinTradeLabel", OBJPROP_FONTSIZE, 12);
+        ObjectSetString(0, "WinTradeLabel", OBJPROP_TEXT, "Winning Trades: ");
+    }
+
+    // Losing Trades
+    if (ObjectFind("LosTradeLabel") == -1) // Check if label exists
+    {
+        // Create the label if it doesn't exist
+        ObjectCreate("LosTradeLabel", OBJ_LABEL, 0, 0, 0);
+        
+        // Set label properties
+        ObjectSetInteger(0, "LosTradeLabel", OBJPROP_XDISTANCE, 10);
+        ObjectSetInteger(0, "LosTradeLabel", OBJPROP_YDISTANCE, 80);
+        ObjectSetInteger(0, "LosTradeLabel", OBJPROP_COLOR, C'210,84,21'); 
+        ObjectSetInteger(0, "LosTradeLabel", OBJPROP_FONTSIZE, 12);
+        ObjectSetString(0, "LosTradeLabel", OBJPROP_TEXT, "Loosing Trades: ");
+    }
 }
 
 
@@ -251,6 +295,9 @@ void UpdateTradeDurationDisplay()
 {
     ObjectSetString(0, "WinDurationLabel", OBJPROP_TEXT, "Winning Trade Duration (AVG): " + IntegerToString(wTradeDuration) + " sec");
     ObjectSetString(0, "LossDurationLabel", OBJPROP_TEXT, "Losing Trade Duration (AVG): " + IntegerToString(lTradeDuration) + " sec");
+    ObjectSetString(0, "WinTradeLabel", OBJPROP_TEXT, "Winning Trades: " + IntegerToString(numWinTrades));
+    ObjectSetString(0, "LosTradeLabel", OBJPROP_TEXT, "Winning Trades: " + IntegerToString(numLosTrades));
+
 }
 
 
