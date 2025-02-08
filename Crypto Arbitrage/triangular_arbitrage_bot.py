@@ -100,7 +100,7 @@ async def monitor_arbitrage():
 
 
             # Wait for a few seconds before checking again
-            await asyncio.sleep(5)
+            # await asyncio.sleep(5)
 
         except Exception as e:
             print(f"Error: {e}")
