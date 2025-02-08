@@ -30,6 +30,7 @@ int lTadeDuration = 0;                     // Average time for a Loosing trade
 int numWinTrades = 0;                      // Total profitable trades made 
 int numLosTrades = 0;                      // Total negative trades made 
 bool timerStarted = false;
+
 #define DEBUG  0
 
 //+------------------------------------------------------------------+
@@ -112,6 +113,9 @@ void OnTick()
       OpenTrade(OP_SELL);
       SellTradesThisCandle++; // Increment sell trade counter
      }
+    if (numWinTrades + numLosTrades > OrdersHistoryTotal()){
+      TradeTransaction();
+    }
   }
 //+------------------------------------------------------------------+
 //| Function to open a trade                                         |
@@ -158,58 +162,55 @@ int getTrend(){
 //+------------------------------------------------------------------+
 //| Handles trade transactions                                       |
 //+------------------------------------------------------------------+
-void OnTradeTransaction(const MqlTradeTransaction& trans, const MqlTradeRequest& request, const MqlTradeResult& result)
+void TradeTransaction()
 {
-    // Check if the transaction type is a closed order
-    if (trans.type == TRADE_TRANSACTION_DEAL_ADD && (trans.deal_type == DEAL_TYPE_SELL || trans.deal_type == DEAL_TYPE_BUY))
-    {
-        if (trans.entry == DEAL_ENTRY_OUT) {// Ensure it's a closed trade
-          Print("Trade closed. Ticket: ", trans.position);
-          
-          // Call function to calculate trade duration
-          int duration = CalculateTradeDuration(trans);
+  if (OrderSelect(OrdersHistoryTotal() - 1, SELECT_BY_POS, MODE_HISTORY))
+  {
+      if (OrderCloseTime() > 0)
+      {
+          Print("Trade closed. Ticket: ", OrderTicket());
+          int duration = CalculateTradeDuration(OrderTicket());
           int tradeTime;
-          if (trans.profit > 0) {
-            tradeTime = wTradeDuration*numWinTrades + duration;
-            numWinTrades += 1;
-            wTradeDuration = tradeTime/numWinTrades;
+          if (OrderProfit() > 0){
+              tradeTime = wTradeDuration * numWinTrades + duration;
+              numWinTrades += 1;
+              wTradeDuration = tradeTime / numWinTrades;
           }
-          else {
-            tradeTime = lTradeDuration*numLosTrades + duration;
-            numLosTrades += 1;
-            lTradeDuration = tradeTime/numLosTrades;
+          else{
+              tradeTime = lTradeDuration * numLosTrades + duration;
+              numLosTrades += 1;
+              lTradeDuration = tradeTime / numLosTrades;
           }
-          if(DEBUG){
-            UpdateTradeDurationDisplay();
+          if (DEBUG)
+          {
+              UpdateTradeDurationDisplay();
           }
-          if (!timerStarted && (numWinTrades + numLossTrades) >= 10){
-            Print("Starting Timer for ", wTradeDuration, " seconds");
-            EventSetTimer(wTradeDuration);  // Start the timer
-            timerStarted = true;
-          }  
-        }
-    }
+          if (!timerStarted && (numWinTrades + numLosTrades) >= 10)
+          {
+              Print("Starting Timer for ", wTradeDuration, " seconds");
+              EventSetTimer(wTradeDuration);  // Start the timer
+              timerStarted = true;
+          }
+      }
+  }
+
 }
 
 //+------------------------------------------------------------------+
 //| Function to calculate the time in seconds between open & close   |
 //+------------------------------------------------------------------+
-int CalculateTradeDuration(const MqlTradeTransaction& trans)
+int CalculateTradeDuration(int ticket)
 {
-    ulong dealTicket = trans.position; // Get the trade position ID
-
-    // Search for the corresponding open trade in history
-    if (HistoryDealSelect(trans.deal)) 
+    // Select the order using the ticket number
+    if (OrderSelect(ticket, SELECT_BY_TICKET))
     {
-        datetime openTime = HistoryDealGetInteger(trans.deal, DEAL_TIME);
-        datetime closeTime = trans.time;
-
-        int durationInSeconds = int(closeTime - openTime);
-        return durationInSeconds;
+      datetime openTime = OrderOpenTime();
+      datetime closeTime = OrderCloseTime();
+      return (int)(closeTime - openTime);  // Calculate duration in seconds
     }
     else
     {
-        Print("Error retrieving trade history for ticket: ", trans.position);
+        Print("Error retrieving trade history for ticket: ", ticket);
         return 0;
     }
 }
@@ -217,33 +218,39 @@ int CalculateTradeDuration(const MqlTradeTransaction& trans)
 void CreateTradeDurationLabels()
 {
     // Winning Trade Duration Label
-    if (ObjectFind("WinDurationLabel") < 0)
+    if (ObjectFind("WinDurationLabel") == -1) // Check if label exists
     {
-        ObjectCreate(0, "WinDurationLabel", OBJ_LABEL, 0, 0, 0);
-        ObjectSetInteger(0, "WinDurationLabel", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+        // Create the label if it doesn't exist
+        ObjectCreate("WinDurationLabel", OBJ_LABEL, 0, 0, 0);
+        
+        // Set label properties
         ObjectSetInteger(0, "WinDurationLabel", OBJPROP_XDISTANCE, 10);
         ObjectSetInteger(0, "WinDurationLabel", OBJPROP_YDISTANCE, 20);
-        ObjectSetInteger(0, "WinDurationLabel", OBJPROP_COLOR, clrGreen);
+        ObjectSetInteger(0, "WinDurationLabel", OBJPROP_COLOR, clrGreen); // Green color for winning duration
         ObjectSetInteger(0, "WinDurationLabel", OBJPROP_FONTSIZE, 12);
+        ObjectSetString(0, "WinDurationLabel", OBJPROP_TEXT, "Winning Trade Duration: 0 sec");
     }
 
     // Losing Trade Duration Label
-    if (ObjectFind("LossDurationLabel") < 0)
+    if (ObjectFind("LossDurationLabel") == -1) // Check if label exists
     {
-        ObjectCreate(0, "LossDurationLabel", OBJ_LABEL, 0, 0, 0);
-        ObjectSetInteger(0, "LossDurationLabel", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+        // Create the label if it doesn't exist
+        ObjectCreate("LossDurationLabel", OBJ_LABEL, 0, 0, 0);
+        
+        // Set label properties
         ObjectSetInteger(0, "LossDurationLabel", OBJPROP_XDISTANCE, 10);
         ObjectSetInteger(0, "LossDurationLabel", OBJPROP_YDISTANCE, 40);
-        ObjectSetInteger(0, "LossDurationLabel", OBJPROP_COLOR, clrRed);
+        ObjectSetInteger(0, "LossDurationLabel", OBJPROP_COLOR, clrRed); // Red color for losing duration
         ObjectSetInteger(0, "LossDurationLabel", OBJPROP_FONTSIZE, 12);
+        ObjectSetString(0, "LossDurationLabel", OBJPROP_TEXT, "Losing Trade Duration: 0 sec");
     }
 }
 
 
 void UpdateTradeDurationDisplay()
 {
-    ObjectSetString(0, "WinDurationLabel", OBJPROP_TEXT, "Winning Trade Duration: " + IntegerToString(wTradeDuration) + " sec");
-    ObjectSetString(0, "LossDurationLabel", OBJPROP_TEXT, "Losing Trade Duration: " + IntegerToString(lTradeDuration) + " sec");
+    ObjectSetString(0, "WinDurationLabel", OBJPROP_TEXT, "Winning Trade Duration (AVG): " + IntegerToString(wTradeDuration) + " sec");
+    ObjectSetString(0, "LossDurationLabel", OBJPROP_TEXT, "Losing Trade Duration (AVG): " + IntegerToString(lTradeDuration) + " sec");
 }
 
 
@@ -271,4 +278,37 @@ void OnTimer()
     // Stop the timer to avoid repeated execution
     EventKillTimer();
     timerStarted = false;
+}
+
+// Function to close a trade based on its ticket number
+void CloseTrade(int ticket)
+{
+    // Ensure the order is selected by ticket
+    if (OrderSelect(ticket, SELECT_BY_TICKET)){
+        double closePrice = 0;
+        int slippage = 3;  // Adjust slippage as needed
+        double lotSize = OrderLots();  // Get the order lot size
+        if (OrderType() == OP_BUY){
+            closePrice = Bid; 
+        }
+        else if (OrderType() == OP_SELL){
+            closePrice = Ask; 
+        }
+        else {
+            Print("Unknown order type, unable to close ticket: ", ticket);
+            return;
+        }
+        bool result = OrderClose(ticket, lotSize, closePrice, slippage, clrNONE);
+        if (result){
+            Print("Trade closed successfully: ", ticket);
+        }
+        else{
+            int errorCode = GetLastError();
+            Print("Error closing trade: ", ticket, " Error code: ", errorCode);
+        }
+    }
+    else
+    {
+        Print("Failed to select order with ticket: ", ticket, " Error code: ", GetLastError());
+    }
 }
