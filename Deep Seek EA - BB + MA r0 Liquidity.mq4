@@ -1,6 +1,6 @@
 //+------------------------------------------------------------------+
-//|                                                      BB_MA_EA.mq4|
-//|                               Created By Timmy and Kenneth Ifidon|
+//|                                             Trade Pro FX Basic EA|
+//|                                           Created By Trade Pro FX|
 //|                                         info.tradeprofx@gmail.com|
 //+------------------------------------------------------------------+
 
@@ -15,7 +15,7 @@
 
 input double LotSize = 0.1;                // Lot size
 
-input int BBPeriod = 20;                   // Trend Approximation
+input int BBPeriod = 50;                   // Trend Approximation
 
 input double BBDeviation = 2.0;            // Trend Deviation
 
@@ -27,17 +27,17 @@ input int MagicNumber = 123456;            // Magic number
 
 input int Slippage = 3;                    // Slippage in points
 
-input int StopLoss = 1500;                   // Stop loss in points
+input int StopLoss = 15000;                // Stop loss in points
 
-input int TakeProfit = 500;                // Take profit in points
+input int TakeProfit = 5000;               // Take profit in points
 
 input int MaxTradesPerCandleBuy = 1;       // Maximum buy trades per candle
 
 input int MaxTradesPerCandleSell = 1;      // Maximum sell trades per candle
 
-input int BackTrack = 1000;                  // History
+input int BackTrack = 1000;                // History
 
-input double VolumeThreshold = 1.5;        // Multiplier 
+input double VolumeThreshold = 0.5;        // Multiplier 
 
 
 
