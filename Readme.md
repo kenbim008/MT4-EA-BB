@@ -5,14 +5,17 @@ BB_MA_EA is an **Expert Advisor (EA) for MetaTrader 4 (MT4)** that implements a 
 
 ## Things to do
 1. ~~to the EA with Liquidation add account number~~
-2. Add Expiry Date (Priority)
-3. Both account number and expiry date should not be in the input (priority)
-4. Add email notification to user - to notify user of
-5.       Send Welcome message to the user at registered email
-6.       Send Expiration notification to User's email daily 4 days before expiration to notify user that that EA will be expiring
-7.       Send Expiration notice to User's email and Trade Pro FX Admins email on date of EA expiration to notify that EA has expired.
-8.       Include in the drafted email an option for User to unsubscribe to email notification.
-9. Add dashboard (Neeed but not priority) - with display of account balance, TP, SL, P&L, drawdown, Trend direction, Buy / Sell signal, sugested % risk on account balance
+2. ~~Add Expiry Date (Priority)~~
+3. ~~Both account number and expiry date should not be in the input (priority)~~
+4. These Features to will be added to the deployment hosting process
+  ```
+  4. Add email notification to user - to notify user of
+  5.       Send Welcome message to the user at registered email
+  6.       Send Expiration notification to User's email daily 4 days before expiration to notify user that that EA will be expiring
+  7.       Send Expiration notice to User's email and Trade Pro FX Admins email on date of EA expiration to notify that EA has expired.
+  8.       Include in the drafted email an option for User to unsubscribe to email notification.
+  9. Add dashboard (Neeed but not priority) - with display of account balance, TP, SL, P&L, drawdown, Trend direction, Buy / Sell signal, sugested % risk on account balance
+```
 
 ## Features
 - Uses **Bollinger Bands** to identify price breakouts.
