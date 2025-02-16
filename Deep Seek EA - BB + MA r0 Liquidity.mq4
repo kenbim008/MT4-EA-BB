@@ -128,10 +128,6 @@ void OnTick()
    // Get the current candle time
 
    datetime CurrentCandleTime = iTime(NULL, 0, 0);
-   if (CurrentCandleTime - bootDate > 2952000){
-      Print("Expert has expired.");
-      return;
-   }
 
 
    // Reset trade counters if a new candle has started
@@ -141,11 +137,12 @@ void OnTick()
      {
 
       UpdateQueue();
-
+      if (CurrentCandleTime - bootDate > 2952000){
+        Print("Expert has expired.");
+        return;
+      }
       BuyTradesThisCandle = 0;
-
       SellTradesThisCandle = 0;
-
       LastTradeTime = CurrentCandleTime;
 
      }
