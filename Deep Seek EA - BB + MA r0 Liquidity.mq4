@@ -55,7 +55,7 @@ double OpenPriceQueue[QUEUE_SIZE]; // Circular buffer for last 5 open prices
 
 const long AllowedAccountNumber = 0;       // Allowed account number (0 = any account)
 
-datetime bootDate = '2025.02.02 00:00:00'; // Date of EA boot
+datetime bootDate = StringToTime("2025.02.02 00:00:00"); // Date of EA boot
 
 int QueueIndex = 0;
 
