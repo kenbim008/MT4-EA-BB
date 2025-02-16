@@ -350,15 +350,16 @@ int getTrend()
    double  middleBandNow = iBands(NULL, 0, BBPeriod, BBDeviation, 0, PRICE_CLOSE, MODE_MAIN, 0);
    average = middleBandNow;
 
-   for (int i = 1; i < BackTrack; i++)
+  for (int i = 0; i < BackTrack; i++) {
+    double middleBandNow = iBands(NULL, 0, BBPeriod, BBDeviation, 0, PRICE_CLOSE, MODE_MAIN, i);
+    sumX += i;                      // X is the index, representing time
+    sumY += middleBandNow;          // Y is the value of the middle band
+    sumXY += i * middleBandNow;     // X * Y
+    sumX2 += i * i;                 // X^2
+   }
 
-     {
-      average += iBands(NULL, 0, BBPeriod, BBDeviation, 0, PRICE_CLOSE, MODE_MAIN, i);
-     }
-
-   average = average / BackTrack;
-
-   if (average < middleBandNow && checkCross(middleBandNow))
+   slope = (BackTrack * sumXY - sumX * sumY) / (middleBandNow * sumX2 - sumX * sumX);
+   if (slope > 0 && checkCross(middleBandNow))
 
      {
       PrintFormat("Average: %.2f", average);
@@ -366,7 +367,7 @@ int getTrend()
 
      }
 
-   else if(average > middleBandNow && checkCross(middleBandNow))
+   else if(slope < 0 && checkCross(middleBandNow))
 
      {
       PrintFormat("Average: %.2f", average);
