@@ -4,7 +4,7 @@
 BB_MA_EA is an **Expert Advisor (EA) for MetaTrader 4 (MT4)** that implements a trading strategy based on **Bollinger Bands** and **Moving Average crossovers**. The EA determines trade signals using Bollinger Bands and Moving Average strategies and manages trade execution with risk management settings.
 
 ## Things to do
-1. to the EA with Liquidation add account number
+1. ~~to the EA with Liquidation add account number~~
 2. Add Expiry Date (Priority)
 3. Both account number and expiry date should not be in the input (priority)
 4. Add email notification to user - to notify user of

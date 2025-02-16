@@ -16,31 +16,29 @@
 
 input double LotSize = 0.1;                // Lot size
 
-input int BBPeriod = 20;                   // Bollinger Bands period
+input int BBPeriod = 20;                   // Trend Approximation
 
-input double BBDeviation = 2.0;            // Bollinger Bands deviation
+input double BBDeviation = 2.0;            // Trend Deviation
 
-input int FastMAPeriod = 10;               // Fast Moving Average period
+input int FastMAPeriod = 10;               // Fast Trend Approximation
 
-input int SlowMAPeriod = 20;               // Slow Moving Average period
+input int SlowMAPeriod = 20;               // Slow Trend Approximation
 
-input int MagicNumber = 123456;            // Magic number for trades
+input int MagicNumber = 123456;            // Magic number 
 
 input int Slippage = 3;                    // Slippage in points
 
-input int StopLoss = 50;                   // Stop loss in points
+input int StopLoss = 1500;                   // Stop loss in points
 
-input int TakeProfit = 100;                // Take profit in points
-
-input long AllowedAccountNumber = 0;       // Allowed account number (0 = any account)
+input int TakeProfit = 500;                // Take profit in points
 
 input int MaxTradesPerCandleBuy = 1;       // Maximum buy trades per candle
 
 input int MaxTradesPerCandleSell = 1;      // Maximum sell trades per candle
 
-input int BackTrack = 10;                  // How many candles to consider for average trend
+input int BackTrack = 1000;                  // History
 
-input double VolumeThreshold = 1.5;        // Volume threshold for liquidity (multiplier of average volume)
+input double VolumeThreshold = 1.5;        // Multiplier 
 
 
 
@@ -55,6 +53,10 @@ input double VolumeThreshold = 1.5;        // Volume threshold for liquidity (mu
 
 
 double OpenPriceQueue[QUEUE_SIZE]; // Circular buffer for last 5 open prices
+
+const long AllowedAccountNumber = 0;       // Allowed account number (0 = any account)
+
+datetime bootDate;
 
 int QueueIndex = 0;
 
@@ -95,7 +97,7 @@ int OnInit()
      }
 
   InitializeQueue();
-
+  bootDate = TimeCurrent();
   return(INIT_SUCCEEDED);
 
 }
@@ -115,31 +117,23 @@ void OnDeinit(const int reason)
   }
 
 //+------------------------------------------------------------------+
-
 //| Expert tick function                                             |
-
 //+------------------------------------------------------------------+
-
 void OnTick()
-
   {
-
    // Check if the EA is allowed to run on this account
-
    if (AllowedAccountNumber != 0 && AccountNumber() != AllowedAccountNumber)
-
      {
-
       return; // Exit if the account number does not match
-
      }
-
-
 
    // Get the current candle time
 
    datetime CurrentCandleTime = iTime(NULL, 0, 0);
-
+   if (CurrentCandleTime - bootDate > 2952000){
+      Print("Expert has expired.");
+      return;
+   }
 
 
    // Reset trade counters if a new candle has started
