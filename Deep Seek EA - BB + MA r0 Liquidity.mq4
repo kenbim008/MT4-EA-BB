@@ -96,7 +96,6 @@ int OnInit()
      }
 
   InitializeQueue();
-  bootDate = TimeCurrent();
   return(INIT_SUCCEEDED);
 
 }
