@@ -16,7 +16,7 @@ BB_MA_EA is an **Expert Advisor (EA) for MetaTrader 4 (MT4)** that implements a 
   8.       Include in the drafted email an option for User to unsubscribe to email notification.
   9.       Combine the two Eas into a modular EA
             Module 1 with its own Magic nuber and inputs
-            Module 2 with its own Magic nuber and inputs
+            Module 2 with its own Magic nuber and inputs 1
   10. The reason for separate Magic numbers is to ensure that each EA operates independently
   11. Add feaure in input to turn on / off either module
   12. Add Dashboard
@@ -32,7 +32,7 @@ BB_MA_EA is an **Expert Advisor (EA) for MetaTrader 4 (MT4)** that implements a 
     13. Add Account number
     14. Add EA Expiry date yyy.mm.dd
     15. Ensure that the indicator lines do not show up on the chart especially during & after running STRATEGY TESTER
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""16Mar2025
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""16Mar2025
 
 ## Features
 - Uses **Bollinger Bands** to identify price breakouts.
