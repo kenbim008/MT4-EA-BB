@@ -62,8 +62,8 @@ void EA1_MA_OnTickDashboard()
     double balance = AccountBalance();
     double equity = AccountEquity();
     double drawdown = 100.0 * (balance - equity) / balance;
-    int buyTrades = CountTrades(OP_BUY);
-    int sellTrades = CountTrades(OP_SELL);
+    int buyTrades = CountTradesInPosition(OP_BUY);
+    int sellTrades = CountTradesInPosition(OP_SELL);
 
     UpdateLabel("Total Balance", "Total Balance: " + DoubleToString(balance, 2));
     UpdateLabel("Total Equity", "Total Equity: " + DoubleToString(equity, 2));
@@ -86,6 +86,17 @@ void EA1_MA_CreateLabel(string name, int x, int y, color textColor)
 }
 //--- EA 1 MA Dashboard 
 
-
+int CountTradesInPosition(int type)
+{
+    int count = 0;
+    for (int i = OrdersTotal() - 1; i >= 0; i--)
+    {
+        if (OrderSelect(i, SELECT_BY_POS) && OrderType() == type)
+        {
+            count++;
+        }
+    }
+    return count;
+}
 
 #endif  

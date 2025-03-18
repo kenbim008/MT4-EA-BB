@@ -20,6 +20,26 @@ input double Module1_TrailingStep  = 10;
 input bool   Module1_HideMA        = true;
 input int    Module1_MagicNumber   = 20131111;
 
+    //--- Global Variables for Module 1
+    double currentLots = Lots;
+    int lossCount = 0;
+
+    //--- Global Variables for Profit Calculation
+    double dailyProfit = 0.0;
+
+    double weeklyProfit = 0.0;
+
+    double monthlyProfit = 0.0;
+    datetime lastDailyUpdate = 0;
+    datetime lastWeeklyUpdate = 0;
+    datetime lastMonthlyUpdate = 0;
+
+    //--- Global Variables for Trade Management
+    double previousHigh = 0.0; // Previous high for Sell trades
+    double previousLow = 0.0;  // Previous low for Buy trades
+
+
+
 //--- Inputs for Module 2
 input double Module2_LotSize        = 0.01;
 input int    Module2_BBPeriod       = 50;
