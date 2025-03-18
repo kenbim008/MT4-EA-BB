@@ -1,7 +1,7 @@
 #ifndef MY_HEADER_MQH
 #define MY_HEADER_MQH
 
-##define  DEBUG 1
+#define  DEBUG 1
 void RemoveIndicagtorsOnTester(){
     if (MQLInfoInteger(MQL_TESTER))
     {
@@ -41,6 +41,12 @@ void UpdateLabel(string name, string text)
 int EA1_MA_OnInit()
 {
     // Set the background
+    long userAccountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
+    if(userAccountNumber != ACCOUNT_NUMBER && ACCOUNT_NUMBER != 0){
+        Print("This EA is not authorized to run on this account. Please contact the Adminsitrator.");
+        return(INIT_FAILED);
+    }
+    EventSetTimer(TIMER_INTERVAL);
     ObjectCreate(0, "Dashboard_Background", OBJ_RECTANGLE_LABEL, 0, 0, 0);
     ObjectSetInteger(0, "Dashboard_Background", OBJPROP_CORNER, CORNER_LEFT_UPPER);
     ObjectSetInteger(0, "Dashboard_Background", OBJPROP_XSIZE, 200);

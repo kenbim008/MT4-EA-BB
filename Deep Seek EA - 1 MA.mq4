@@ -12,7 +12,7 @@ input double LotSize = 0.01;            // Lot Size
 input double EntryDistance = 1.0;       // Distance for trade entry (in $)
 input double ExitDistance = 1.0;        // Distance for trade exit (in $)
 input int MagicNumber = 123456;         // Magic Number for EA
-input int MULT = 1.5;                   // Multiplier for lot size  
+double int MULT = 1.5;                   // Multiplier for lot size  
 
 double currentLotsize = LotSize;
 int previoursBars = 0;
@@ -31,13 +31,7 @@ int OnInit()
 {
     // Initialization code
     currentLotsize = LotSize;
-    long userAccountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
-    if(userAccountNumber != ACCOUNT_NUMBER && ACCOUNT_NUMBER != 0){
-        Print("This EA is not authorized to run on this account. Please contact the Adminsitrator.");
-        return(INIT_FAILED);
-        EventSetTimer(TIMER_INTERVAL);
-    }
-    return(INIT_SUCCEEDED);
+    return(EA1_MA_OnInit());
 }
 
 //+------------------------------------------------------------------+
@@ -112,9 +106,9 @@ void CloseAllTrades(int cmd)
         {
             if (OrderType() == cmd)
             {
+                double profit     = OrderProfit(); // Built-in function to check trade profit/loss
                 OrderClose(OrderTicket(), OrderLots(), OrderType() == OP_BUY ? Bid : Ask, 3, clrNONE);
                 
-                double profit     = OrderProfit(); // Built-in function to check trade profit/loss
                 if(profit > 0) {
                     currentLotsize = LotSize;
                 } else if(profit < 0) {
