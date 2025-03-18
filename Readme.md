@@ -9,6 +9,9 @@ BB_MA_EA is an **Expert Advisor (EA) for MetaTrader 4 (MT4)** that implements a 
 3. ~~Both account number and expiry date should not be in the input (priority)~~
 4. These Features to will be added to the deployment hosting process
   ```
+
+Deep Seek EA - (15Min) R3 (No Lines) Revise.mq4 & Trade Vantage EA - Snipper - Ken.mq4
+
   4. Add email notification to user - to notify user of
   5.       Send Welcome message to the user at registered email
   6.       Send Expiration notification to User's email daily 4 days before expiration to notify user that that EA will be expiring
@@ -33,6 +36,10 @@ BB_MA_EA is an **Expert Advisor (EA) for MetaTrader 4 (MT4)** that implements a 
     14. Add EA Expiry date yyy.mm.dd
     15. Ensure that the indicator lines do not show up on the chart especially during & after running STRATEGY TESTER
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""16Mar2025
+
+Deep Seek EA - 1 MA.mq4
+
+
 
 ## Features
 - Uses **Bollinger Bands** to identify price breakouts.
