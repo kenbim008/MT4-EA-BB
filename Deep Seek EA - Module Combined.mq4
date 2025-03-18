@@ -22,23 +22,35 @@ input double Module1_TrailingStep  = 10;
 input bool   Module1_HideMA        = true;
 input int    Module1_MagicNumber   = 20131111;
 
-    //--- Global Variables for Module 1
-    double currentLots = Lots;
-    int lossCount = 0;
+//---Module 1 Helpers 
 
-    //--- Global Variables for Profit Calculation
-    double dailyProfit = 0.0;
+//+------------------------------------------------------------------+
+//| Update Profit Calculations                                       |
+//+------------------------------------------------------------------+
+void UpdateProfitCalculations()
+  {
+   datetime currentTime = TimeCurrent();
+   if(lastDailyUpdate == 0 || TimeDay(currentTime) != TimeDay(lastDailyUpdate))
+     {
+      dailyProfit = 0.0;
+      lastDailyUpdate = currentTime;
+     }
+   if(lastWeeklyUpdate == 0 || TimeDayOfWeek(currentTime) < TimeDayOfWeek(lastWeeklyUpdate))
+     {
+      weeklyProfit = 0.0;
+      lastWeeklyUpdate = currentTime;
+     }
+   if(lastMonthlyUpdate == 0 || TimeMonth(currentTime) != TimeMonth(lastMonthlyUpdate))
+     {
+      monthlyProfit = 0.0;
+      lastMonthlyUpdate = currentTime;
+     }
 
-    double weeklyProfit = 0.0;
-
-    double monthlyProfit = 0.0;
-    datetime lastDailyUpdate = 0;
-    datetime lastWeeklyUpdate = 0;
-    datetime lastMonthlyUpdate = 0;
-
-    //--- Global Variables for Trade Management
-    double previousHigh = 0.0; // Previous high for Sell trades
-    double previousLow = 0.0;  // Previous low for Buy trades
+   double profit = AccountBalance() - AccountCredit();
+   dailyProfit += profit;
+   weeklyProfit += profit;
+   monthlyProfit += profit;
+  }
 
 
 
@@ -79,6 +91,21 @@ int OnInit()
 {
     // Initialize dashboards for each module
     CreateDashboard();
+
+    // Module 1 GlobalVariables 
+    m1currentLots = Lots;
+    m1lossCount = 0;
+    m1dailyProfit = 0.0;
+    m1weeklyProfit = 0.0;
+    m1monthlyProfit = 0.0;
+    m1lastDailyUpdate = 0;
+    m1lastWeeklyUpdate = 0;
+    m1lastMonthlyUpdate = 0;
+
+    //--- Global Variables for Trade Management
+    double previousHigh = 0.0; // Previous high for Sell trades
+    double previousLow = 0.0;  // Previous low for Buy trades
+
     return(INIT_SUCCEEDED);
 }
 
@@ -118,12 +145,12 @@ void ExecuteModule1()
    if(Bars<100 || IsTradeAllowed()==false)
       return;
 //--- calculate open orders by current symbol
-   if(CalculateCurrentOrders(Symbol())==0) CheckForOpen();
-   else                                    CheckForClose();
+   if(EAR3_CalculateCurrentOrders(Symbol())==0) EAR3_CheckForOpen(Module1_MovingPeriod,Module1_MovingShift);
+   else                                    EAR3_CheckForClose(Module1_MovingPeriod,Module1_MovingShift);
 //--- Update the dashboard
-   UpdateDashboard();
+//    UpdateDashboard();
 //--- Trailing Stop Management
-   TrailingStopManagement();
+   TrailingStopManagement(Module1_TrailingStop,Module1_TrailingStep);
 //--- Hide MA lines if enabled
    if(HideMA)
      {
