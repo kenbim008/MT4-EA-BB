@@ -13,6 +13,7 @@ input double EntryDistance = 1.0;       // Distance for trade entry (in $)
 input double ExitDistance = 1.0;        // Distance for trade exit (in $)
 input int MagicNumber = 123456;         // Magic Number for EA
 input int MULT = 1.5;                   // Multiplier for lot size  
+
 int currentLotsize = LotSize;
 int previoursBars = 0;
 #define ACCOUNT_NUMBER 0
