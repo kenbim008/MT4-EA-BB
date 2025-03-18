@@ -13,6 +13,7 @@ input double EntryDistance = 1.0;       // Distance for trade entry (in $)
 input double ExitDistance = 1.0;        // Distance for trade exit (in $)
 input int MagicNumber = 123456;         // Magic Number for EA
 
+int previoursBars = 0;
 #define ACCOUNT_NUMBER 0
 #define START_DATE  D'2024.03.01'  // YYYY.MM.DD
 #define END_DATE    D'2024.03.31'  // YYYY.MM.DD
@@ -28,7 +29,7 @@ int OnInit()
 {
     // Initialization code
     long userAccountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
-    if(userAccountNumber != ACCOUNT_NUMBER || ACCOUNT_NUMBER != 0){
+    if(userAccountNumber != ACCOUNT_NUMBER && ACCOUNT_NUMBER != 0){
         Print("This EA is not authorized to run on this account. Please contact the Adminsitrator.");
         return(INIT_FAILED);
         EventSetTimer(TIMER_INTERVAL);
@@ -57,27 +58,29 @@ void OnTick()
     double MA_Value = iMA(NULL, 0, MAPeriod, MAShift, MODE_SMA, PRICE_CLOSE, 0);
 
     // Check for Buy entry condition
-    if (Close[1] > MA_Value + EntryDistance && Open[1] < MA_Value && CountTrades(OP_BUY) == 0)
+    if (Close[1] > MA_Value + EntryDistance && Open[1] < MA_Value && CountTrades(OP_BUY) == 0 && previoursBars != Bars)
     {
+        previoursBars = Bars;
         CloseAllTrades(OP_SELL); // Close any Sell trades before opening a Buy
         OpenTrade(OP_BUY);
     }
 
     // Check for Sell entry condition
-    if (Close[1] < MA_Value - EntryDistance && Open[1] > MA_Value && CountTrades(OP_SELL) == 0)
+    if (Close[1] < MA_Value - EntryDistance && Open[1] > MA_Value && CountTrades(OP_SELL) == 0 && previoursBars != Bars)
     {
+        previoursBars = Bars;
         CloseAllTrades(OP_BUY); // Close any Buy trades before opening a Sell
         OpenTrade(OP_SELL);
     }
 
     // Check for Buy exit condition
-    if (Bid < MA_Value - ExitDistance && CountTrades(OP_BUY) > 0)
+    if (Close[1] < MA_Value - ExitDistance && CountTrades(OP_BUY) > 0)
     {
         CloseAllTrades(OP_BUY);
     }
 
     // Check for Sell exit condition
-    if (Ask > MA_Value + ExitDistance && CountTrades(OP_SELL) > 0)
+    if (Close[1] > MA_Value + ExitDistance && CountTrades(OP_SELL) > 0)
     {
         CloseAllTrades(OP_SELL);
     }
@@ -158,33 +161,3 @@ void OnTimer()
     Print("EA is running. Current Time: ", TimeToString(currentTime, TIME_SECONDS));
     EventSetTimer(TIMER_INTERVAL);
 }
-
-void CheckForOpen()
-  {
-   double ma;
-   int    res;
-//--- go trading only for first tiks of new bar
-   if(Volume[0]>1) return;
-//--- get Moving Average 
-   ma=iMA(NULL,0,MovingPeriod,MovingShift,MODE_SMA,PRICE_CLOSE,0);
-//--- sell conditions
-   if(Open[1]>ma && Close[1]<ma)
-     {
-      res=OrderSend(Symbol(),OP_SELL,currentLots,Bid,3,0,0,"",MAGICMA,0,Red);
-      if(res<0)
-         Print("Error opening SELL order: ",GetLastError());
-      else
-         previousHigh = High[1]; // Set previous high for Sell trade
-      return;
-     }
-//--- buy conditions
-   if(Open[1]<ma && Close[1]>ma)
-     {
-      res=OrderSend(Symbol(),OP_BUY,currentLots,Ask,3,0,0,"",MAGICMA,0,Blue);
-      if(res<0)
-         Print("Error opening BUY order: ",GetLastError());
-      else
-         previousLow = Low[1]; // Set previous low for Buy trade
-      return;
-     }
-  }
