@@ -1,12 +1,16 @@
 #ifndef MY_HEADER_MQH
 #define MY_HEADER_MQH
 
+##define  DEBUG 1
 void RemoveIndicagtorsOnTester(){
     if (MQLInfoInteger(MQL_TESTER))
     {
         for (int i = 0; i < 100; i++)  // Remove all indicators from the chart
         {
             ChartIndicatorDelete(0, 0, i);
+        }
+        if(DEBUG){
+            Print("Indicators Removed");
         }
     }
 }
