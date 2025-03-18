@@ -8,6 +8,8 @@
 #property version   "1.000"
 #property strict
 
+#include <TraveVantage_Util.mqh>
+
 //--- Inputs for Module 1
 input double Module1_Lots          = 0.01;
 input double Module1_MaximumRisk   = 0.02;
@@ -108,14 +110,26 @@ void OnTick()
 }
 
 //+------------------------------------------------------------------+
-//| Execute Module 1 logic                                           |
+//| Execute Module 1 logic    (15Min R3)                             |
 //+------------------------------------------------------------------+
 void ExecuteModule1()
 {
-    // Module 1 logic here (from original EA)
-    // Ensure all functions and variables are prefixed with "Module1_"
-    // Example: Module1_CheckForOpen(), Module1_CheckForClose(), etc.
-    // Use Module1_MagicNumber for trades
+//--- check for history and trading
+   if(Bars<100 || IsTradeAllowed()==false)
+      return;
+//--- calculate open orders by current symbol
+   if(CalculateCurrentOrders(Symbol())==0) CheckForOpen();
+   else                                    CheckForClose();
+//--- Update the dashboard
+   UpdateDashboard();
+//--- Trailing Stop Management
+   TrailingStopManagement();
+//--- Hide MA lines if enabled
+   if(HideMA)
+     {
+      ChartIndicatorDelete(0, 0, "Moving Average");
+     }
+//---
 }
 
 //+------------------------------------------------------------------+
