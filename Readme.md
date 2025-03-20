@@ -35,6 +35,7 @@ Deep Seek EA - (15Min) R3 (No Lines) Revise.mq4 & Trade Vantage EA - Snipper - K
     13. Add Account number
     14. Add EA Expiry date yyy.mm.dd
     15. Ensure that the indicator lines do not show up on the chart especially during & after running STRATEGY TESTER
+    16. Ability to track profit in order to charge comission
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""16Mar2025
 
 Deep Seek EA - 1 MA.mq4
@@ -54,6 +55,7 @@ Deep Seek EA - 1 MA.mq4
   6. Add Account number
   7. Add EA Expiry date yyyy.mm.dd
   8. Ensure that the indicator lines do not show up on the chart especially during & after running STRATEGY TESTER
+  9. Ability to track profit in order to charge comission
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""17Mar2025
 
 Deep Seek EA - Break & Retest + MA Cross Modular
@@ -78,6 +80,7 @@ Add email notification to user - to notify user of
   6. Add Account number
   7. Add EA Expiry date yyyy.mm.dd
   8. Ensure that the indicator lines do not show up on the chart especially during & after running STRATEGY TESTER
+  9. Ability to track profit in order to charge comission
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""19Mar2025
 
 
