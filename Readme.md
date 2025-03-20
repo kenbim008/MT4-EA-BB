@@ -52,9 +52,37 @@ Deep Seek EA - 1 MA.mq4
           Total number of Buy
           Total number of Sell       
   6. Add Account number
-  7. Add EA Expiry date yyy.mm.dd
+  7. Add EA Expiry date yyyy.mm.dd
   8. Ensure that the indicator lines do not show up on the chart especially during & after running STRATEGY TESTER
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""17Mar2025
+
+Deep Seek EA - Break & Retest + MA Cross Modular
+
+Add email notification to user - to notify user of
+  1.       Send Welcome message to the user at registered email
+  2.       Send Expiration notification to User's email daily 4 days before expiration to notify user that that EA will be expiring
+  3.       Send Expiration notice to User's email and Trade Pro FX Admins email on date of EA expiration to notify that EA has expired.
+  4.       Include in the drafted email an option for User to unsubscribe to email notification.
+  5. Add Dashboard
+        Total Balance =
+        Total Equity =
+        Drawdown %
+        Module 1
+          Total number of Buy
+          Total number of Sell
+          Module 1 daily profit - in $
+        Module 2
+          Total number of Buy
+          Total number of Sell
+          Module 2 daily profit - in $
+  6. Add Account number
+  7. Add EA Expiry date yyyy.mm.dd
+  8. Ensure that the indicator lines do not show up on the chart especially during & after running STRATEGY TESTER
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""19Mar2025
+
+
+
+
 
 
 ## Features
