@@ -83,7 +83,32 @@ Add email notification to user - to notify user of
   9. Ability to track profit in order to charge comission
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""19Mar2025
 
+Deep Seek EA - MA (15Min) Multiplier- Contingency
 
+Add email notification to user - to notify user of
+  1.       Send Welcome message to the user at registered email
+  2.       Send Expiration notification to User's email daily 4 days before expiration to notify user that that EA will be expiring
+  3.       Send Expiration notice to User's email and Trade Pro FX Admins email on date of EA expiration to notify that EA has expired.
+  4.       Include in the drafted email an option for User to unsubscribe to email notification.
+  5. Add Dashboard
+        Total Balance =
+        Total Equity =
+        Drawdown %
+        Module 1
+          Total number of Buy
+          Total number of Sell
+          Module 1 daily profit - in $
+        Module 2
+          Total number of Buy
+          Total number of Sell
+          Module 2 daily profit - in $
+  6. Add Account number
+  7. Add EA Expiry date yyyy.mm.dd
+  8. Check 1.5 Multiplier - Make sure it works (When trade closes in negative, multiply the next trade by 1.5. Once trade closes in positive, revert back to default lot size)
+  
+  9. Ensure that the indicator lines do not show up on the chart especially during & after running STRATEGY TESTER
+  10. Ability to track profit in order to charge comission
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""01Apr2025
 
 
 
