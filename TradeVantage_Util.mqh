@@ -1,7 +1,7 @@
 #ifndef TRADE_VANTAGE_UTIL_H
 #define TRADE_VANTAGE_UTIL_H
 
-#define DEBUG 1
+#define DEBUG 0
     
 void RemoveIndicagtorsOnTester(){
     if (MQLInfoInteger(MQL_TESTER))
@@ -70,8 +70,8 @@ int EA1_MA_OnInit()
     ObjectCreate(0, "Dashboard_Background", OBJ_RECTANGLE_LABEL, 0, 0, 0);
     ObjectSetInteger(0, "Dashboard_Background", OBJPROP_XDISTANCE, 0);  // Set X position to 0 (top-left)
     ObjectSetInteger(0, "Dashboard_Background", OBJPROP_YDISTANCE, 20);  // Set Y position to 0 (top-left)
-    ObjectSetInteger(0, "Dashboard_Background", OBJPROP_XSIZE, 150);
-    ObjectSetInteger(0, "Dashboard_Background", OBJPROP_YSIZE, 215);
+    ObjectSetInteger(0, "Dashboard_Background", OBJPROP_XSIZE, 160);
+    ObjectSetInteger(0, "Dashboard_Background", OBJPROP_YSIZE, 200);
     ObjectSetInteger(0, "Dashboard_Background", OBJPROP_COLOR, C'22,27,27');
     ObjectSetInteger(0, "Dashboard_Background", OBJPROP_BGCOLOR,C'22,27,27');
     ObjectSetInteger(0, "Dashboard_Background", OBJPROP_WIDTH, 2);
@@ -83,7 +83,7 @@ int EA1_MA_OnInit()
     ObjectCreate(0, "Separator1", OBJ_RECTANGLE_LABEL, 0, 0, 0);
     ObjectSetInteger(0, "Separator1", OBJPROP_XDISTANCE, 0);  // Set X position to 0 (top-left)
     ObjectSetInteger(0, "Separator1", OBJPROP_YDISTANCE, 90);  // Set Y position to 0 (top-left)
-    ObjectSetInteger(0, "Separator1", OBJPROP_XSIZE, 150);
+    ObjectSetInteger(0, "Separator1", OBJPROP_XSIZE, 160);
     ObjectSetInteger(0, "Separator1", OBJPROP_YSIZE, 5);
     ObjectSetInteger(0, "Separator1", OBJPROP_COLOR, C'22,27,27');
     ObjectSetInteger(0, "Separator1", OBJPROP_BGCOLOR,C'22,27,27');
@@ -94,15 +94,15 @@ int EA1_MA_OnInit()
     ObjectCreate(0, "Separator2", OBJ_RECTANGLE_LABEL, 0, 0, 0);
     ObjectSetInteger(0, "Separator2", OBJPROP_XDISTANCE, 0);  // Set X position to 0 (top-left)
     ObjectSetInteger(0, "Separator2", OBJPROP_YDISTANCE, 140);  // Set Y position to 0 (top-left)
-    ObjectSetInteger(0, "Separator2", OBJPROP_XSIZE, 150);
+    ObjectSetInteger(0, "Separator2", OBJPROP_XSIZE, 160);
     ObjectSetInteger(0, "Separator2", OBJPROP_YSIZE, 5);
     ObjectSetInteger(0, "Separator2", OBJPROP_COLOR, C'22,27,27');
     ObjectSetInteger(0, "Separator2", OBJPROP_BGCOLOR,C'22,27,27');
     ObjectSetInteger(0, "Separator2", OBJPROP_WIDTH, 2);
     ObjectSetInteger(0, "Separator2", OBJPROP_STYLE, STYLE_SOLID);
-    CreateLabel("This Days Profit", 10, 150, COLOR_TEXT);
-    CreateLabel("This Weeks Profit", 10, 170, COLOR_TEXT);
-    CreateLabel("This Months Profit", 10, 190, COLOR_TEXT);
+    CreateLabel("This Day's Profit", 10, 150, COLOR_TEXT);
+    CreateLabel("This Week's Profit", 10, 170, COLOR_TEXT);
+    CreateLabel("This Month's Profit", 10, 190, COLOR_TEXT);
 
 
     return INIT_SUCCEEDED;
@@ -116,19 +116,25 @@ void EA1_MA_OnTickDashboard()
     double balance = AccountBalance();
     double equity = AccountEquity();
     double drawdown = 100.0 * (balance - equity) / balance;
+    
 
     string totalBalanceText = "Total Balance: " + StringFormat("%-20s", DoubleToString(balance, 2));
     string totalEquityText = "Total Equity: " + StringFormat("%-20s", DoubleToString(equity, 2));
     string drawdownText = "Drawdown: " + StringFormat("%-20s", DoubleToString(drawdown, 2) + "%");
     string totalBuyTradesText = "Total Buy Trades: " + StringFormat("%-20s", IntegerToString(TOTALBUY_trades));
     string totalSellTradesText = "Total Sell Trades: " + StringFormat("%-20s", IntegerToString(TOTALSELL_trades));
-
+    string totalProfitText = "This Day's Profit: " + StringFormat("%-20s", DoubleToString(TOTALDAY_profit, 2));
+    string totalProfitTextWeek = "This Week's Profit: " + StringFormat("%-20s", DoubleToString(TOTALWEEK_profit, 2));
+    string totalProfitTextMonth = "This Month's Profit: " + StringFormat("%-20s", DoubleToString(TOTALMONTH_profit, 2));
     // Update each label
     UpdateLabel("Total Balance", totalBalanceText);
     UpdateLabel("Total Equity", totalEquityText);
     UpdateLabel("Drawdown %", drawdownText);
     UpdateLabel("Total Buy Trades", totalBuyTradesText);
     UpdateLabel("Total Sell Trades", totalSellTradesText);
+    UpdateLabel("This Day's Profit", totalProfitText);
+    UpdateLabel("This Week's Profit",totalProfitTextWeek);
+    UpdateLabel("This Month's Profit", totalProfitTextMonth);
 }
 
 //+------------------------------------------------------------------+
@@ -176,28 +182,30 @@ int countTotalProfits(){
                 // Get the time of the most recent trade closure
                 datetime closeTime = OrderCloseTime();
                 
-                // Get the day, month, and week of the closed trade
-                int closeDay = DayOfMonth(closeTime);
-                int closeMonth = Month(closeTime);
-                int closeWeek = WeekOfYear(closeTime);
+                MqlDateTime closeStruct;
+                TimeToStruct(closeTime, closeStruct);
+                
+                int closeDay = closeStruct.day;
+                int closeMonth = closeStruct.mon;
+                int closeWeek = (closeStruct.day_of_year / 7) + 1;
                 
                 // Add profit to the respective day, month, or week
                 if (closeDay == CURRENT_DAY) {
-                    CURRENT_DAY += profit;
+                    TOTALDAY_profit += profit;
                 } else {
-                    CURRENT_DAY = profit; // Reset to today's profit
+                    TOTALDAY_profit = profit; // Reset to today's profit
                 }
                 
                 if (closeMonth == CURRENT_MONTH) {
-                    CURRENT_MONTH += profit;
+                    TOTALMONTH_profit += profit;
                 } else {
-                    CURRENT_MONTH = profit; // Reset to this month's profit
+                    TOTALMONTH_profit = profit; // Reset to this month's profit
                 }
                 
                 if (closeWeek == CURRENT_WEEK) {
-                    CURRENT_WEEK += profit;
+                    TOTALWEEK_profit += profit;
                 } else {
-                    CURRENT_WEEK = profit; // Reset to this week's profit
+                    TOTALWEEK_profit = profit; // Reset to this week's profit
                 }
                 
             }
@@ -215,13 +223,8 @@ void UpdateDateValues() {
     TimeToStruct(currentTime, timeStruct);
     
     int currentDay = timeStruct.day;
-    int currentMonth = timeStruct.month;
-    int currentYear = timeStruct.year;
-    
-    // Calculate the week of the year using TimeToStruct
-    MqlDateTime timeStruct;
-    TimeToStruct(currentTime, timeStruct);
-    int currentWeek = (timeStruct.month - 1) * 4 + (timeStruct.day / 7);  // Week calculation based on month and day
+    int currentMonth = timeStruct.mon;
+    int currentWeek = (timeStruct.day_of_year / 7) + 1;
 
     // Check if the current day is different from the stored day
     if (currentDay != CURRENT_DAY) {

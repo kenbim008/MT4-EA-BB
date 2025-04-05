@@ -16,7 +16,7 @@ input int MagicNumber = 123456;         // Magic Number for EA
 input double MULT = 1.5;                   // Multiplier for lot size  
 
 double currentLotsize = LotSize;
-int previoursBars = 0;
+int previousBars = 0;
 
 
 #define VALID_ACCOUNT ACCOUNT_NUMBER
@@ -58,12 +58,12 @@ void OnTick()
     double MA_Value = iMA(NULL, 0, MAPeriod, MAShift, MODE_SMA, PRICE_CLOSE, 0);
 
     // Check for Buy entry condition
-    if previousBars != Bars
+    if (previousBars != Bars)
     {
-        previoursBars = Bars;
+        previousBars = Bars;
         UpdateDateValues();
     }
-    if (Close[1] > MA_Value + EntryDistance && Open[1] < MA_Value && CountTrades(OP_BUY) == 0 && previoursBars != Bars)
+    if (Close[1] > MA_Value + EntryDistance && Open[1] < MA_Value && CountTrades(OP_BUY) == 0 && previousBars != Bars)
     {
         CloseAllTrades(OP_SELL); // Close any Sell trades before opening a Buy
         OpenTrade(OP_BUY);
@@ -71,7 +71,7 @@ void OnTick()
     }
 
     // Check for Sell entry condition
-    if (Close[1] < MA_Value - EntryDistance && Open[1] > MA_Value && CountTrades(OP_SELL) == 0 && previoursBars != Bars)
+    if (Close[1] < MA_Value - EntryDistance && Open[1] > MA_Value && CountTrades(OP_SELL) == 0 && previousBars != Bars)
     {
         CloseAllTrades(OP_BUY); // Close any Buy trades before opening a Sell
         OpenTrade(OP_SELL);

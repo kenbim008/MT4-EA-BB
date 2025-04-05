@@ -3,6 +3,9 @@
 //|                                       Created By Trade Vantage FX|
 //|                                     info.tradevantagefx@gmail.com|
 //+------------------------------------------------------------------+
+#define MA_1_EA_H
+#include "TradeVantage_Util.mqh"
+
 #property copyright "info.tradevantagefx@gmail.com"
 #property link      "info.tradevantagefx@gmail.com"
 #property version   "2.0.1"
@@ -130,6 +133,7 @@ void DeleteDashboard()
 //+------------------------------------------------------------------+
 void UpdateDashboard()
   {
+   UpdateDateValues()
 //--- Update Balance
    ObjectSetString(0, "Balance", OBJPROP_TEXT, "Balance: " + DoubleToString(AccountBalance(), 2));
 
