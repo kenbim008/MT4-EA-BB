@@ -16,6 +16,8 @@ input double TakeProfit = 1000;       // Take Profit in $
 input int MagicNumber = 123456;         // Magic Number for EA
 input double MULT = 1.5;                   // Multiplier for lot size  
 input double SLOPE = 1.0;                // Trend Strength
+input int SLOPE_PERIOD = 100;         // Slope Period
+input int SLOPE_LENGTH = 32;          // Slope Length
 
 #define TIMER_PERIOD TIMER_INTERVAL
 #define VALID_ACCOUNT ACCOUNT_NUMBER
@@ -44,7 +46,8 @@ void OnDeinit(const int reason)
 {
     Print("Deinitializing EA...");
     EventKillTimer();
-    RemoveIndicatorsOnTester();
+    if (!DEBUG)
+        RemoveIndicatorsOnTester();
 
 }
 
@@ -66,7 +69,7 @@ void OnTick()
     int sellTrades = CountTrades(OP_SELL);
     
     // --- BUY ENTRY ---
-    if (close > MA_Value + EntryDistance && open < MA_Value && buyTrades == 0 && previousBars != Bars && lineOfBestFit() ==1 )
+    if (close > MA_Value + EntryDistance && open < MA_Value && buyTrades == 0 && previousBars != Bars && lineOfBestFit(SLOPE_PERIOD, SLOPE_LENGTH) ==1 )
     {
         if(DEBUG)
         Print("BUY SIGNAL -> Close[1]: ", close,
@@ -76,12 +79,13 @@ void OnTick()
               ", BuyTrades: ", buyTrades);
 
         CloseAllTrades(OP_SELL);
+        CheckLastClose();
         OpenTrade(OP_BUY);
         TOTALBUY_trades++;
         tradeMade = true;
     }
     // --- SELL ENTRY ---
-    else if (close < MA_Value - EntryDistance && open > MA_Value && sellTrades == 0 && previousBars != Bars && lineOfBestFit() ==1 )
+    else if (close < MA_Value - EntryDistance && open > MA_Value && sellTrades == 0 && previousBars != Bars && lineOfBestFit(SLOPE_PERIOD, SLOPE_LENGTH) ==1 )
     {
         if(DEBUG)
         Print("SELL SIGNAL -> Close[1]: ", close,
@@ -91,6 +95,7 @@ void OnTick()
               ", SellTrades: ", sellTrades);
 
         CloseAllTrades(OP_BUY);
+        CheckLastClose();
         OpenTrade(OP_SELL);
         TOTALSELL_trades++;
         tradeMade = true;
@@ -275,4 +280,28 @@ void OnTimer()
     }
     EventSetTimer(TIMER_INTERVAL);
 
+}
+
+void CheckLastClose()
+{
+   int totalOrders = OrdersHistoryTotal();
+
+    if (totalOrders > 0)
+    {
+        // Check only the most recent closed trade
+        int i = totalOrders - 1;
+
+        if (OrderSelect(i, SELECT_BY_POS, MODE_HISTORY) &&
+            OrderMagicNumber() == MagicNumber &&
+            OrderSymbol() == Symbol() &&
+            OrderCloseTime() > 0)
+        {
+            double profit = OrderProfit();
+
+            if (profit > 0)
+            {
+                currentLotsize = LotSize;
+            }
+        }
+    }
 }

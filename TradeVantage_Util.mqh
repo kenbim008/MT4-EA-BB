@@ -78,14 +78,13 @@ int AuthenticateSubscription(){
     return 1;
 }
 
-int lineOfBestFit()
+int lineOfBestFit( int MAPeriod_trend, int n)
 {
-    const int n = 32;
     double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
 
     for (int i = 0; i < n; i++)
     {
-        double y = iMA(NULL, 0, MAPeriod, MAShift, MODE_SMA, PRICE_CLOSE, i);
+        double y = iMA(NULL, 0, MAPeriod_trend, MAShift, MODE_SMA, PRICE_CLOSE, i);
         double x = i;
 
         sumX += x;
