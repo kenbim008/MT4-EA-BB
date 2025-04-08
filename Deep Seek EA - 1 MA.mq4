@@ -10,30 +10,29 @@
 input int MAPeriod = 12;                // MA Period
 input int MAShift = 6;                  // MA Shift
 input double LotSize = 0.01;            // Lot Size
-input double EntryDistance = 1.0;       // Distance for trade entry (in $)
-input double ExitDistance = 1.0;        // Distance for trade exit (in $)
+input double EntryDistance = 0;       // Distance for trade entry (in $)
+input double ExitDistance = 0;        // Distance for trade exit (in $)
 input int MagicNumber = 123456;         // Magic Number for EA
 input double MULT = 1.5;                   // Multiplier for lot size  
+input double TakeProfit = 1000;
 
-double currentLotsize = LotSize;
-int previousBars = 0;
-
-
-#define VALID_ACCOUNT ACCOUNT_NUMBER
-#define START_DATE  D'2024.03.01'  // YYYY.MM.DD
-#define END_DATE    D'2024.03.31'  // YYYY.MM.DD
-#define START_HOUR  9    // Start time (24-hour format)
-#define END_HOUR    13   // End time (4-hour window after start)
-#define START_MIN   0    // Start minute
-#define END_MIN     0    // End minute
 #define TIMER_PERIOD TIMER_INTERVAL
+#define VALID_ACCOUNT ACCOUNT_NUMBER
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
 {
     // Initialization code
-    currentLotsize = LotSize;
+    Print("Initializing EA...");
+    if (MQLInfoInteger(MQL_TESTER) && MQLInfoInteger(MQL_VISUAL_MODE) && !DEBUG) {
+        Alert("This EA does not support Visual Mode.\nPlease disable Visual Mode in the Strategy Tester and restart.");
+        return INIT_FAILED;
+    }
+    if(!(DEBUG)){
+        EventSetTimer(TIMER_INTERVAL);
+    }
     return(EA1_MA_OnInit());
 }
 
@@ -42,7 +41,9 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
+    Print("Deinitializing EA...");
     EventKillTimer();
+    RemoveIndicatorsOnTester();
 
 }
 
@@ -51,43 +52,100 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
-    // Check if Running on strategy Teste 
-    RemoveIndicagtorsOnTester();
-    EA1_MA_OnTickDashboard();
-    // Calculate MA value
-    double MA_Value = iMA(NULL, 0, MAPeriod, MAShift, MODE_SMA, PRICE_CLOSE, 0);
+    bool tradeMade = false;
 
-    // Check for Buy entry condition
+    EA1_MA_OnTickDashboard();
+
+    double MA_Value = iMA(NULL, 0, MAPeriod, MAShift, MODE_SMA, PRICE_CLOSE, 1);
+
+    double close = Close[1];
+    double open = Open[1];
+    int buyTrades = CountTrades(OP_BUY);
+    int sellTrades = CountTrades(OP_SELL);
+
+    // --- BUY ENTRY ---
+    if (close > MA_Value + EntryDistance && open < MA_Value && buyTrades == 0 && previousBars != Bars)
+    {
+        if(DEBUG)
+        Print("BUY SIGNAL -> Close[1]: ", close,
+              ", Open[1]: ", open,
+              ", MA: ", MA_Value,
+              ", EntryDistance: ", EntryDistance,
+              ", BuyTrades: ", buyTrades);
+
+        CloseAllTrades(OP_SELL);
+        OpenTrade(OP_BUY);
+        TOTALBUY_trades++;
+        tradeMade = true;
+    }
+    // --- SELL ENTRY ---
+    else if (close < MA_Value - EntryDistance && open > MA_Value && sellTrades == 0 && previousBars != Bars)
+    {
+        if(DEBUG)
+        Print("SELL SIGNAL -> Close[1]: ", close,
+              ", Open[1]: ", open,
+              ", MA: ", MA_Value,
+              ", EntryDistance: ", EntryDistance,
+              ", SellTrades: ", sellTrades);
+
+        CloseAllTrades(OP_BUY);
+        OpenTrade(OP_SELL);
+        TOTALSELL_trades++;
+        tradeMade = true;
+    }
+
+    // --- BUY EXIT ---
+    if (close < MA_Value - ExitDistance && buyTrades > 0)
+    {
+        if(DEBUG)
+        Print("BUY EXIT -> Close[1]: ", close,
+              ", MA: ", MA_Value,
+              ", ExitDistance: ", ExitDistance,
+              ", BuyTrades: ", buyTrades);
+
+        CloseAllTrades(OP_BUY);
+        tradeMade = true;
+    }
+
+    // --- SELL EXIT ---
+    if (close > MA_Value + ExitDistance && sellTrades > 0)
+    {
+        if(DEBUG)
+        Print("SELL EXIT -> Close[1]: ", close,
+              ", MA: ", MA_Value,
+              ", ExitDistance: ", ExitDistance,
+              ", SellTrades: ", sellTrades);
+
+        CloseAllTrades(OP_SELL);
+        tradeMade = true;
+    }
+
+    // --- NO TRADE ---
+    if (!tradeMade && DEBUG)
+    {
+        if (!(close < MA_Value - EntryDistance))
+            Print("NO BUY: close not below MA - EntryDistance -> close: ", close, ", threshold: ", MA_Value - EntryDistance);
+        if (!(open > MA_Value + EntryDistance))
+            Print("NO BUY: open not above MA + EntryDistance -> open: ", open, ", threshold: ", MA_Value + EntryDistance);
+        if (buyTrades != 0)
+            Print("NO BUY: Existing BUY trades present -> buyTrades: ", buyTrades);
+        if (previousBars == Bars)
+            Print("NO BUY/SELL: Same bar -> previousBars == Bars: ", Bars);
+
+        if (!(close > MA_Value + EntryDistance))
+            Print("NO SELL: close not above MA + EntryDistance -> close: ", close, ", threshold: ", MA_Value + EntryDistance);
+        if (!(open < MA_Value - EntryDistance))
+            Print("NO SELL: open not below MA - EntryDistance -> open: ", open, ", threshold: ", MA_Value - EntryDistance);
+        if (sellTrades != 0)
+            Print("NO SELL: Existing SELL trades present -> sellTrades: ", sellTrades);
+    }else if (DEBUG)
+    {
+        Print("Trade made: ", tradeMade);
+    }
     if (previousBars != Bars)
     {
         previousBars = Bars;
         UpdateDateValues();
-    }
-    if (Close[1] > MA_Value + EntryDistance && Open[1] < MA_Value && CountTrades(OP_BUY) == 0 && previousBars != Bars)
-    {
-        CloseAllTrades(OP_SELL); // Close any Sell trades before opening a Buy
-        OpenTrade(OP_BUY);
-        TOTALBUY_trades++;
-    }
-
-    // Check for Sell entry condition
-    if (Close[1] < MA_Value - EntryDistance && Open[1] > MA_Value && CountTrades(OP_SELL) == 0 && previousBars != Bars)
-    {
-        CloseAllTrades(OP_BUY); // Close any Buy trades before opening a Sell
-        OpenTrade(OP_SELL);
-        TOTALSELL_trades++;
-    }
-
-    // Check for Buy exit condition
-    if (Close[1] < MA_Value - ExitDistance && CountTrades(OP_BUY) > 0)
-    {
-        CloseAllTrades(OP_BUY);
-    }
-
-    // Check for Sell exit condition
-    if (Close[1] > MA_Value + ExitDistance && CountTrades(OP_SELL) > 0)
-    {
-        CloseAllTrades(OP_SELL);
     }
 }
 
@@ -96,11 +154,59 @@ void OnTick()
 //+------------------------------------------------------------------+
 void OpenTrade(int cmd)
 {
-    int ticket = OrderSend(Symbol(), cmd, currentLotsize, cmd == OP_BUY ? Ask : Bid, 3, 0, 0, "", MagicNumber, 0, clrNONE);
-    if (ticket < 0)
+    int ticket = -1;
+    int errorCode = 0;
+    double openPrice = (cmd == OP_BUY) ? Ask : Bid;
+    double tpPrice = 0;
+    
+    do
     {
-        Print("Error opening trade: ", GetLastError());
-    }
+        // Calculate the TP price based on dollar target
+        double tickValue = MarketInfo(Symbol(), MODE_TICKVALUE);
+        double tickSize = MarketInfo(Symbol(), MODE_TICKSIZE);
+        double profitPoints = (TakeProfit / (currentLotsize * tickValue)) * tickSize;
+
+        if (cmd == OP_BUY)
+            tpPrice = NormalizeDouble(openPrice + profitPoints, Digits);
+        else
+            tpPrice = NormalizeDouble(openPrice - profitPoints, Digits);
+
+        if (DEBUG)
+        {
+            Print("Trying to open trade: ", cmd == OP_BUY ? "BUY" : "SELL",
+                  ", Lot Size: ", DoubleToString(currentLotsize, 4),
+                  ", TP price: ", DoubleToString(tpPrice, Digits));
+        }
+
+        ticket = OrderSend(Symbol(), cmd, currentLotsize, openPrice, 3,
+                           0, tpPrice, "", MagicNumber, 0, clrNONE);
+
+
+        if (ticket < 0)
+        {
+            errorCode = GetLastError();
+            Print("OrderSend failed. Error: ", errorCode);
+
+            if (errorCode == 134)  // Not enough money
+            {
+                currentLotsize = currentLotsize / MULT;
+
+                if (currentLotsize < LotSize)
+                {
+                    Print("Lot size too small to continue retrying. Aborting trade.");
+                    break;
+                }
+
+                Sleep(500); // Slight delay before retry
+            }
+            else
+            {
+                // For other errors, stop retrying
+                break;
+            }
+        }
+
+    } while (ticket < 0 && errorCode == 134);
 }
 
 //+------------------------------------------------------------------+
@@ -160,28 +266,9 @@ int CountTrades(int cmd)
 
 void OnTimer()
 {
-    datetime currentTime = TimeCurrent();  // Get current server time
-    int currentHour = Hour();
-    int currentMinute = Minute();
-
-    // Check if the current date is within range
-    if (currentTime < START_DATE || currentTime > END_DATE)
-    {
-        Print("EA Has Expired. Stopping EA...");
-        ExpertRemove();  // Quit EA
+    if(AuthenticateSubscription() == 0){
         return;
     }
-
-    // Check if the current time is outside the allowed timeframe
-    if (currentHour < START_HOUR || (currentHour == START_HOUR && currentMinute < START_MIN) ||
-        currentHour > END_HOUR || (currentHour == END_HOUR && currentMinute >= END_MIN))
-    {
-        Print("EA Has Expired. Stopping EA...");
-        ExpertRemove();  // Quit EA
-        return;
-    }
-    
-    // EA runs normally if within time range
-    Print("EA is running. Current Time: ", TimeToString(currentTime, TIME_SECONDS));
     EventSetTimer(TIMER_INTERVAL);
+
 }

@@ -1,26 +1,84 @@
+
 #ifndef TRADE_VANTAGE_UTIL_H
 #define TRADE_VANTAGE_UTIL_H
+//--- PARAMETERS
+//+------------------------------------------------------------------+
+            const datetime START_DATE = D'2025.04.01 00:00'; // YYYY.MM.DD HH:MM
+            const datetime END_DATE   = D'2025.04.30 23:59'; // YYYY.MM.DD HH:MM
+            #define DEBUG 1
+            #define ACCOUNT_NUMBER 0
+//+------------------------------------------------------------------+
 
-#define DEBUG 0
+// Define Timer Setting 
+#define TIMER_INTERVAL 300
+#define START_HOUR  0    // Start time (24-hour format)
+#define END_HOUR    23   // End time (4-hour window after start)
+#define START_MIN   0    // Start minute
+#define END_MIN     59    // End minute
     
-void RemoveIndicagtorsOnTester(){
-    if (MQLInfoInteger(MQL_TESTER))
-    {
-        for (int i = 0; i < 100; i++)  // Remove all indicators from the chart
-        {
-            ChartIndicatorDelete(0, 0, (string)i);
+void RemoveIndicatorsOnTester() {
+    int total = ObjectsTotal();
+    if (DEBUG) Print("Starting RemoveIndicatorsOnTester — total objects: ", total);
+
+    for (int i = total - 1; i >= 0; i--) {
+        string objName = ObjectName(i);
+        if (DEBUG) Print("Found object: ", objName);    
+        bool result = ObjectDelete(objName);
+        if (result) {
+            if (DEBUG) Print("Deleted indicator object: ", objName);
+        } else {
+            if (DEBUG) Print("Failed to delete object: ", objName, " | Error: ", GetLastError());
         }
-        if(DEBUG){
-            Print("Indicators Removed");
-        }
+        
     }
+
+    if (DEBUG) Print("Clean Up finished.");
 
 }
 
-#ifdef MA_1_EA_H
+int AuthenticateSubscription(){
+    long userAccountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
+    Print("User Account Number: ", userAccountNumber);
+    if(userAccountNumber != ACCOUNT_NUMBER && ACCOUNT_NUMBER != 0){
+        Print("This EA is not authorized to run on this account. Please contact the Adminsitrator.");
+        return 0;
+    }
+    else{
+        Print("EA is authorized to run on this account.");
+    }
 
-#define ACCOUNT_NUMBER 0
-#define TIMER_INTERVAL 300
+
+    datetime currentTime = TimeCurrent();  // Get current server time
+    int currentHour = TimeHour(currentTime);;
+    int currentMinute = TimeHour(currentTime);;
+    Print("Current Time: ", TimeToString(currentTime, TIME_DATE | TIME_SECONDS));
+    // Check if the current date is within range
+    if (MQLInfoInteger(MQL_TESTER)) {
+        return 1; // Skip date check in strategy tester
+    }
+    if (currentTime < START_DATE || currentTime > END_DATE)
+    {
+        Print("EA Has Expired (Day). Stopping EA...");
+        Print("Your subscrtion has expired on: ", TimeToString(START_DATE, TIME_DATE | TIME_SECONDS), " to ", TimeToString(END_DATE, TIME_DATE | TIME_SECONDS));
+        ExpertRemove();  // Quit EA
+        return 0 ;
+    }
+
+    // Check if the current time is outside the allowed timeframe
+    if (currentHour < START_HOUR || (currentHour == START_HOUR && currentMinute < START_MIN) ||
+        currentHour > END_HOUR || (currentHour == END_HOUR && currentMinute >= END_MIN))
+    {
+        Print("EA Has Expired (Time). Stopping EA...");
+        ExpertRemove();  // Quit EA
+        return 0 ;
+    }
+    
+    // EA runs normally if within time range
+    Print("EA is running. Current Time: ", TimeToString(currentTime, TIME_SECONDS));
+    return 1;
+}
+
+#ifdef MA_1_EA_H
 
 int TOTALBUY_trades = 0; 
 int TOTALSELL_trades = 0; 
@@ -32,6 +90,8 @@ int CURRENT_DAY = 0;
 int CURRENT_MONTH = 0;
 int CURRENT_WEEK = 0;
 
+double currentLotsize = 0;
+int previousBars = 0;
 
 
 
@@ -47,6 +107,9 @@ int CURRENT_WEEK = 0;
 #define COLOR_BUY clrLime
 #define COLOR_SELL clrRed
 
+
+
+
 //+------------------------------------------------------------------+
 //| Function to Update Labels                                       |
 //+------------------------------------------------------------------+
@@ -61,48 +124,64 @@ void UpdateLabel(string name, string text)
 int EA1_MA_OnInit()
 {
     // Set the background
-    long userAccountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
-    if(userAccountNumber != ACCOUNT_NUMBER && ACCOUNT_NUMBER != 0){
-        Print("This EA is not authorized to run on this account. Please contact the Adminsitrator.");
-        return(INIT_FAILED);
+    UpdateDateValues();
+    if (AuthenticateSubscription() == 0) {
+        return INIT_FAILED;
     }
-    EventSetTimer(TIMER_INTERVAL);
+    int row = 20;
+    int nextRow = 20;
+    int width = 180;
+    currentLotsize = LotSize;
+    
     ObjectCreate(0, "Dashboard_Background", OBJ_RECTANGLE_LABEL, 0, 0, 0);
     ObjectSetInteger(0, "Dashboard_Background", OBJPROP_XDISTANCE, 0);  // Set X position to 0 (top-left)
-    ObjectSetInteger(0, "Dashboard_Background", OBJPROP_YDISTANCE, 20);  // Set Y position to 0 (top-left)
-    ObjectSetInteger(0, "Dashboard_Background", OBJPROP_XSIZE, 160);
-    ObjectSetInteger(0, "Dashboard_Background", OBJPROP_YSIZE, 200);
+    ObjectSetInteger(0, "Dashboard_Background", OBJPROP_YDISTANCE, row);  // Set Y position to 0 (top-left)
+    ObjectSetInteger(0, "Dashboard_Background", OBJPROP_XSIZE, width);
+    ObjectSetInteger(0, "Dashboard_Background", OBJPROP_YSIZE, 220);
     ObjectSetInteger(0, "Dashboard_Background", OBJPROP_COLOR, C'22,27,27');
     ObjectSetInteger(0, "Dashboard_Background", OBJPROP_BGCOLOR,C'22,27,27');
     ObjectSetInteger(0, "Dashboard_Background", OBJPROP_WIDTH, 2);
     ObjectSetInteger(0, "Dashboard_Background", OBJPROP_STYLE, STYLE_SOLID);
+    row += 10;
 
-    CreateLabel("Total Balance", 10, 30, COLOR_TEXT);
-    CreateLabel("Total Equity", 10, 50, COLOR_TEXT);
-    CreateLabel("Drawdown %", 10, 70, COLOR_TEXT);
+    CreateLabel("Total Balance", 10, row, COLOR_TEXT);
+    row += nextRow;
+    CreateLabel("Total Equity", 10, row, COLOR_TEXT);
+    row += nextRow;
+    CreateLabel("Drawdown %", 10, row, COLOR_TEXT);
+    row += nextRow;
+    CreateLabel("Lot Size", 10, row, COLOR_TEXT);
+    row += nextRow;
     ObjectCreate(0, "Separator1", OBJ_RECTANGLE_LABEL, 0, 0, 0);
     ObjectSetInteger(0, "Separator1", OBJPROP_XDISTANCE, 0);  // Set X position to 0 (top-left)
-    ObjectSetInteger(0, "Separator1", OBJPROP_YDISTANCE, 90);  // Set Y position to 0 (top-left)
-    ObjectSetInteger(0, "Separator1", OBJPROP_XSIZE, 160);
+    ObjectSetInteger(0, "Separator1", OBJPROP_YDISTANCE, row);  // Set Y position to 0 (top-left)
+    ObjectSetInteger(0, "Separator1", OBJPROP_XSIZE, width);
     ObjectSetInteger(0, "Separator1", OBJPROP_YSIZE, 5);
     ObjectSetInteger(0, "Separator1", OBJPROP_COLOR, C'22,27,27');
     ObjectSetInteger(0, "Separator1", OBJPROP_BGCOLOR,C'22,27,27');
     ObjectSetInteger(0, "Separator1", OBJPROP_WIDTH, 2);
     ObjectSetInteger(0, "Separator1", OBJPROP_STYLE, STYLE_SOLID);
-    CreateLabel("Total Buy Trades", 10, 100, COLOR_BUY);
-    CreateLabel("Total Sell Trades", 10, 120, COLOR_SELL);
+    row +=10;
+    CreateLabel("Total Buy Trades", 10, row, COLOR_BUY);
+    row += nextRow;
+    CreateLabel("Total Sell Trades", 10, row, COLOR_SELL);
+    row += nextRow;
     ObjectCreate(0, "Separator2", OBJ_RECTANGLE_LABEL, 0, 0, 0);
     ObjectSetInteger(0, "Separator2", OBJPROP_XDISTANCE, 0);  // Set X position to 0 (top-left)
-    ObjectSetInteger(0, "Separator2", OBJPROP_YDISTANCE, 140);  // Set Y position to 0 (top-left)
-    ObjectSetInteger(0, "Separator2", OBJPROP_XSIZE, 160);
+    ObjectSetInteger(0, "Separator2", OBJPROP_YDISTANCE, row);  // Set Y position to 0 (top-left)
+    ObjectSetInteger(0, "Separator2", OBJPROP_XSIZE, width);
     ObjectSetInteger(0, "Separator2", OBJPROP_YSIZE, 5);
     ObjectSetInteger(0, "Separator2", OBJPROP_COLOR, C'22,27,27');
     ObjectSetInteger(0, "Separator2", OBJPROP_BGCOLOR,C'22,27,27');
     ObjectSetInteger(0, "Separator2", OBJPROP_WIDTH, 2);
     ObjectSetInteger(0, "Separator2", OBJPROP_STYLE, STYLE_SOLID);
-    CreateLabel("This Day's Profit", 10, 150, COLOR_TEXT);
-    CreateLabel("This Week's Profit", 10, 170, COLOR_TEXT);
-    CreateLabel("This Month's Profit", 10, 190, COLOR_TEXT);
+    row += 10;
+    CreateLabel("This Day's Profit", 10, row, COLOR_TEXT);
+    row += nextRow;
+    CreateLabel("This Week's Profit", 10, row, COLOR_TEXT);
+    row += nextRow;
+    CreateLabel("This Month's Profit", 10, row, COLOR_TEXT);
+    row += nextRow;
 
 
     return INIT_SUCCEEDED;
@@ -121,6 +200,7 @@ void EA1_MA_OnTickDashboard()
     string totalBalanceText = "Total Balance: " + StringFormat("%-20s", DoubleToString(balance, 2));
     string totalEquityText = "Total Equity: " + StringFormat("%-20s", DoubleToString(equity, 2));
     string drawdownText = "Drawdown: " + StringFormat("%-20s", DoubleToString(drawdown, 2) + "%");
+    string lotSizeText = "Lot Size: " + StringFormat("%-20s", DoubleToString(currentLotsize, 2));
     string totalBuyTradesText = "Total Buy Trades: " + StringFormat("%-20s", IntegerToString(TOTALBUY_trades));
     string totalSellTradesText = "Total Sell Trades: " + StringFormat("%-20s", IntegerToString(TOTALSELL_trades));
     string totalProfitText = "This Day's Profit: " + StringFormat("%-20s", DoubleToString(TOTALDAY_profit, 2));
@@ -130,6 +210,7 @@ void EA1_MA_OnTickDashboard()
     UpdateLabel("Total Balance", totalBalanceText);
     UpdateLabel("Total Equity", totalEquityText);
     UpdateLabel("Drawdown %", drawdownText);
+    UpdateLabel("Lot Size", lotSizeText);
     UpdateLabel("Total Buy Trades", totalBuyTradesText);
     UpdateLabel("Total Sell Trades", totalSellTradesText);
     UpdateLabel("This Day's Profit", totalProfitText);
@@ -221,7 +302,9 @@ void UpdateDateValues() {
     // Extract the day, month, and year from the current time
     MqlDateTime timeStruct;
     TimeToStruct(currentTime, timeStruct);
-    
+    if (DEBUG)
+        Print("Current Time: ", TimeToString(currentTime, TIME_DATE | TIME_SECONDS));
+
     int currentDay = timeStruct.day;
     int currentMonth = timeStruct.mon;
     int currentWeek = (timeStruct.day_of_year / 7) + 1;
@@ -229,6 +312,9 @@ void UpdateDateValues() {
     // Check if the current day is different from the stored day
     if (currentDay != CURRENT_DAY) {
         CURRENT_DAY = currentDay;
+        if(DEBUG){
+            Print("Current Day: ", CURRENT_DAY);
+        }
         // Optionally reset the profit for the new day
         TOTALDAY_profit = 0;
     }
@@ -236,6 +322,9 @@ void UpdateDateValues() {
     // Check if the current month is different from the stored month
     if (currentMonth != CURRENT_MONTH) {
         CURRENT_MONTH = currentMonth;
+        if(DEBUG){
+            Print("Current Month: ", CURRENT_MONTH);
+        }
         // Optionally reset the profit for the new month
         TOTALMONTH_profit = 0;
     }
@@ -243,6 +332,9 @@ void UpdateDateValues() {
     // Check if the current week is different from the stored week
     if (currentWeek != CURRENT_WEEK) {
         CURRENT_WEEK = currentWeek;
+        if(DEBUG){
+            Print("Current Week: ", CURRENT_WEEK);
+        }
         // Optionally reset the profit for the new week
         TOTALWEEK_profit = 0;
     }

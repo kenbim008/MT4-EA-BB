@@ -45,6 +45,7 @@ void OnDeinit(const int reason)
   {
 //--- Delete the dashboard objects
    DeleteDashboard();
+   RemoveIndicagtorsOnTester();
   }
 //+------------------------------------------------------------------+
 //| Create the dashboard                                             |
