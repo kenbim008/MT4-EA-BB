@@ -78,6 +78,30 @@ int AuthenticateSubscription(){
     return 1;
 }
 
+int lineOfBestFit()
+{
+    const int n = 32;
+    double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+
+    for (int i = 0; i < n; i++)
+    {
+        double y = iMA(NULL, 0, MAPeriod, MAShift, MODE_SMA, PRICE_CLOSE, i);
+        double x = i;
+
+        sumX += x;
+        sumY += y;
+        sumXY += x * y;
+        sumX2 += x * x;
+    }
+
+    double slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+
+    if (slope > SLOPE || slope < -SLOPE)
+        return 1;
+    else
+        return 0;
+}
+
 #ifdef MA_1_EA_H
 
 int TOTALBUY_trades = 0; 

@@ -12,9 +12,10 @@ input int MAShift = 6;                  // MA Shift
 input double LotSize = 0.01;            // Lot Size
 input double EntryDistance = 0;       // Distance for trade entry (in $)
 input double ExitDistance = 0;        // Distance for trade exit (in $)
+input double TakeProfit = 1000;       // Take Profit in $
 input int MagicNumber = 123456;         // Magic Number for EA
 input double MULT = 1.5;                   // Multiplier for lot size  
-input double TakeProfit = 1000;
+input double SLOPE = 1.0;                // Trend Strength
 
 #define TIMER_PERIOD TIMER_INTERVAL
 #define VALID_ACCOUNT ACCOUNT_NUMBER
@@ -56,15 +57,16 @@ void OnTick()
 
     EA1_MA_OnTickDashboard();
 
+
     double MA_Value = iMA(NULL, 0, MAPeriod, MAShift, MODE_SMA, PRICE_CLOSE, 1);
 
     double close = Close[1];
     double open = Open[1];
     int buyTrades = CountTrades(OP_BUY);
     int sellTrades = CountTrades(OP_SELL);
-
+    
     // --- BUY ENTRY ---
-    if (close > MA_Value + EntryDistance && open < MA_Value && buyTrades == 0 && previousBars != Bars)
+    if (close > MA_Value + EntryDistance && open < MA_Value && buyTrades == 0 && previousBars != Bars && lineOfBestFit() ==1 )
     {
         if(DEBUG)
         Print("BUY SIGNAL -> Close[1]: ", close,
@@ -79,7 +81,7 @@ void OnTick()
         tradeMade = true;
     }
     // --- SELL ENTRY ---
-    else if (close < MA_Value - EntryDistance && open > MA_Value && sellTrades == 0 && previousBars != Bars)
+    else if (close < MA_Value - EntryDistance && open > MA_Value && sellTrades == 0 && previousBars != Bars && lineOfBestFit() ==1 )
     {
         if(DEBUG)
         Print("SELL SIGNAL -> Close[1]: ", close,
@@ -121,27 +123,27 @@ void OnTick()
     }
 
     // --- NO TRADE ---
-    if (!tradeMade && DEBUG)
-    {
-        if (!(close < MA_Value - EntryDistance))
-            Print("NO BUY: close not below MA - EntryDistance -> close: ", close, ", threshold: ", MA_Value - EntryDistance);
-        if (!(open > MA_Value + EntryDistance))
-            Print("NO BUY: open not above MA + EntryDistance -> open: ", open, ", threshold: ", MA_Value + EntryDistance);
-        if (buyTrades != 0)
-            Print("NO BUY: Existing BUY trades present -> buyTrades: ", buyTrades);
-        if (previousBars == Bars)
-            Print("NO BUY/SELL: Same bar -> previousBars == Bars: ", Bars);
+    // if (!tradeMade && DEBUG)
+    // {
+    //     if (!(close < MA_Value - EntryDistance))
+    //         Print("NO BUY: close not below MA - EntryDistance -> close: ", close, ", threshold: ", MA_Value - EntryDistance);
+    //     if (!(open > MA_Value + EntryDistance))
+    //         Print("NO BUY: open not above MA + EntryDistance -> open: ", open, ", threshold: ", MA_Value + EntryDistance);
+    //     if (buyTrades != 0)
+    //         Print("NO BUY: Existing BUY trades present -> buyTrades: ", buyTrades);
+    //     if (previousBars == Bars)
+    //         Print("NO BUY/SELL: Same bar -> previousBars == Bars: ", Bars);
 
-        if (!(close > MA_Value + EntryDistance))
-            Print("NO SELL: close not above MA + EntryDistance -> close: ", close, ", threshold: ", MA_Value + EntryDistance);
-        if (!(open < MA_Value - EntryDistance))
-            Print("NO SELL: open not below MA - EntryDistance -> open: ", open, ", threshold: ", MA_Value - EntryDistance);
-        if (sellTrades != 0)
-            Print("NO SELL: Existing SELL trades present -> sellTrades: ", sellTrades);
-    }else if (DEBUG)
-    {
-        Print("Trade made: ", tradeMade);
-    }
+    //     if (!(close > MA_Value + EntryDistance))
+    //         Print("NO SELL: close not above MA + EntryDistance -> close: ", close, ", threshold: ", MA_Value + EntryDistance);
+    //     if (!(open < MA_Value - EntryDistance))
+    //         Print("NO SELL: open not below MA - EntryDistance -> open: ", open, ", threshold: ", MA_Value - EntryDistance);
+    //     if (sellTrades != 0)
+    //         Print("NO SELL: Existing SELL trades present -> sellTrades: ", sellTrades);
+    // }else if (DEBUG)
+    // {
+    //     Print("Trade made: ", tradeMade);
+    // }
     if (previousBars != Bars)
     {
         previousBars = Bars;
@@ -244,6 +246,8 @@ void CloseAllTrades(int cmd)
         }
     }
 }
+
+
 
 //+------------------------------------------------------------------+
 //| Function to count open trades of a specific type                 |
