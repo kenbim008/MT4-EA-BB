@@ -183,7 +183,7 @@ This EA is for **educational purposes**. Use at your own risk. Always test on a 
 
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-Deep Seek EA - 1 MA.mq4
+GPT - BB Dual Entry EA.mq4
 
   Add email notification to user - to notify user of
   1.       Send Welcome message to the user at registered email
