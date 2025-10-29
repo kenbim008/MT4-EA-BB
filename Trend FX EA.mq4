@@ -1,11 +1,11 @@
 //+------------------------------------------------------------------+
-//|                                    BB Dual Entry EA v1.13 (Revised) |
+//|                                    BB Dual Entry EA v1.13 (Sec)  |
 //|                    Bollinger Bands Entry with Per-Side Martingale |
-//|                            (Removed any \"dual-entry\" mode)      |
+//|                            (Removed any "dual-entry" mode)        |
 //+------------------------------------------------------------------+
 #property copyright "BB Dual Entry Strategy"
 #property link      ""
-#property version   "1.13r"
+#property version   "1.13r-sec"
 #property strict
 
 //--- Input Parameters
@@ -18,7 +18,7 @@ input string    Section2 = "========== Trading Settings ==========";
 input double    LotSize = 0.1;                     // Initial Lot Size
 input bool      UseMartingale = true;              // Use Martingale (kept for UI backwards compat)
 input bool      MartingaleOnEntry = true;          // Apply martingale sizing on every BB-triggered entry
-input double    MartingaleMultiplier = 1.2;        // Martingale Multiplier
+input double    MartingaleMultiplier = 1.7;        // Martingale Multiplier
 input double    MaxLotSize = 5.0;                 // Maximum Lot Size
 input int       MagicNumber = 12345;               // Magic Number
 input int       Slippage = 3;                      // Slippage
@@ -63,6 +63,10 @@ input color     Dashboard_TitleColor = clrYellow;  // Dashboard Title Color
 input int       Dashboard_FontSize = 9;            // Dashboard Font Size
 input string    Dashboard_Font = "Arial";          // Dashboard Font
 
+//--- Security inputs (added)
+input long      AllowedAccountNumber = 0;          // 0 = no account lock. Set account number to lock.
+input string    ExpiryDate = "31/12/2025";         // Format dd/mm/yyyy. After this date EA will not open new trades.
+
 //--- Global Variables
 datetime lastBarTime = 0;
 int totalBuyOrders = 0;
@@ -72,6 +76,9 @@ double totalLoss = 0;
 string currentTrend = "Sideways";
 double currentBuyLot = 0;   // Current lot size for buy orders
 double currentSellLot = 0;  // Current lot size for sell orders
+
+bool   gAccountLocked = false;
+datetime gExpiryTime = 0;
 
 // Forward declarations
 double CalculateLotSize(int orderType);
@@ -84,6 +91,7 @@ void CreateDashboard();
 void UpdateDashboard();
 void RemoveDashboard();
 void OpenOrder(int orderType, string signal);
+datetime ParseExpiryDate(string d);
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -92,9 +100,62 @@ int OnInit()
 {
    currentBuyLot = LotSize;
    currentSellLot = LotSize;
+
+   // parse expiry date
+   gExpiryTime = ParseExpiryDate(ExpiryDate);
+   if(gExpiryTime == 0)
+   {
+      PrintFormat("ExpiryDate parsing failed for '%s'. EA will treat expiry as disabled.", ExpiryDate);
+   }
+   else
+   {
+      // set expiry to end of that date (23:59)
+      // ParseExpiryDate returns time at 00:00 of that day; add 86399 to set end of day
+      gExpiryTime += 86399;
+      PrintFormat("EA expiry set to %s (server time).", TimeToStr(gExpiryTime, TIME_DATE|TIME_MINUTES));
+   }
+
+   // account lock
+   if(AllowedAccountNumber != 0 && AccountNumber() != AllowedAccountNumber)
+   {
+      gAccountLocked = true;
+      PrintFormat("EA account lock: running on account %d but allowed account is %d. Trading disabled.", AccountNumber(), AllowedAccountNumber);
+   }
+
+   // expiry immediate check
+   if(gExpiryTime != 0 && TimeCurrent() > gExpiryTime)
+   {
+      gAccountLocked = true;
+      PrintFormat("EA expired on %s. Trading disabled.", TimeToStr(gExpiryTime, TIME_DATE|TIME_MINUTES));
+   }
+
    if(ShowDashboard) CreateDashboard();
    lastBarTime = Time[0];
    return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Parse dd/mm/yyyy into datetime at 00:00 server time               |
+//+------------------------------------------------------------------+
+datetime ParseExpiryDate(string d)
+{
+   int p1 = StringFind(d, "/");
+   if(p1 == -1) return(0);
+   int p2 = StringFind(d, "/", p1+1);
+   if(p2 == -1) return(0);
+   string sDay = StringSubstr(d, 0, p1);
+   string sMonth = StringSubstr(d, p1+1, p2 - p1 - 1);
+   string sYear = StringSubstr(d, p2+1);
+   if(StringLen(sDay) == 0 || StringLen(sMonth) == 0 || StringLen(sYear) == 0) return(0);
+   int day = StringToInteger(sDay);
+   int month = StringToInteger(sMonth);
+   int year = StringToInteger(sYear);
+   if(day <= 0 || month <= 0 || year <= 1970) return(0);
+   // build "YYYY.MM.DD 00:00" which StringToTime accepts
+   string ymd = IntegerToString(year) + "." + (month<10? "0"+IntegerToString(month) : IntegerToString(month))
+                + "." + (day<10? "0"+IntegerToString(day) : IntegerToString(day)) + " 00:00";
+   datetime t = StringToTime(ymd);
+   return(t);
 }
 
 //+------------------------------------------------------------------+
@@ -110,6 +171,16 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
+   // quick expiry check each tick
+   if(gExpiryTime != 0 && TimeCurrent() > gExpiryTime)
+   {
+      if(!gAccountLocked)
+      {
+         gAccountLocked = true;
+         PrintFormat("EA expired at %s. Trading disabled.", TimeToStr(gExpiryTime, TIME_DATE|TIME_MINUTES));
+      }
+   }
+
    // Tick-level actions if same bar
    if(Time[0] == lastBarTime)
    {
@@ -234,6 +305,19 @@ double NormalizeLot(double lot)
 //+------------------------------------------------------------------+
 void OpenOrder(int orderType, string signal)
 {
+   // account / expiry security check
+   if(AllowedAccountNumber != 0 && AccountNumber() != AllowedAccountNumber)
+   {
+      // extra guard - should already be set in OnInit but check nonetheless
+      PrintFormat("OpenOrder blocked: running on account %d but allowed account is %d.", AccountNumber(), AllowedAccountNumber);
+      return;
+   }
+   if(gExpiryTime != 0 && TimeCurrent() > gExpiryTime)
+   {
+      PrintFormat("OpenOrder blocked: EA expired on %s.", TimeToStr(gExpiryTime, TIME_DATE|TIME_MINUTES));
+      return;
+   }
+
    double price = (orderType == OP_BUY) ? Ask : Bid;
    double point = Point;
    if(Point == 0.00001 || Point == 0.001) point = Point * 10;
