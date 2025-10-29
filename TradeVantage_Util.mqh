@@ -1,6 +1,36 @@
 
 #ifndef TRADE_VANTAGE_UTIL_H
 #define TRADE_VANTAGE_UTIL_H
+
+//--- BACKEND INTEGRATION PARAMETERS
+//+------------------------------------------------------------------+
+            // Input parameters for backend connection
+            input string BackendConfig = "========== Backend Configuration ==========";
+            input string API_URL = "https://tradevantage-webapp.onrender.com";  // Backend API URL
+            input string EMAIL = "";  // TradeVantage Email
+            input string PASSWORD = "";  // TradeVantage Password
+            input int MAGIC_NUMBER = 12345;  // Magic Number for this EA
+            
+            // Note: CREATOR_EMAIL must be defined in the EA file before including this header
+            // It is used by GetExpertUUID() and CheckBackendAuthentication() functions
+            
+            input bool ENABLE_BACKEND_SYNC = false;  // Enable backend synchronization
+            
+            // Stored authentication credentials (set automatically after login)
+            string gJWT_TOKEN = "";  // JWT Authentication Token (stored after login)
+            string gEXPERT_UUID = "";  // Expert UUID (stored after lookup by magic number)
+            bool gLoggedIn = false;  // Login status
+            bool gExpertUUIDFound = false;  // Expert UUID lookup status
+            
+            // Subscription authentication cache
+            bool gAuthenticated = false;
+            datetime gLastAuthCheck = 0;
+            int gAuthCheckInterval = 3600;  // Check every hour
+            
+            // Trade tracking for backend sync
+            string gOpenTrades[];  // Store ticket -> UUID mappings
+//+------------------------------------------------------------------+
+
 //--- PARAMETERS
 //+------------------------------------------------------------------+
             const datetime START_DATE = D'2025.04.01 00:00'; // YYYY.MM.DD HH:MM
@@ -73,9 +103,308 @@ int AuthenticateSubscription(){
         return 0 ;
     }
     
+    // Backend authentication check
+    if (ENABLE_BACKEND_SYNC) {
+        // First, ensure we're logged in and have expert UUID
+        if (!gLoggedIn || !gExpertUUIDFound) {
+            if (StringLen(EMAIL) == 0 || StringLen(PASSWORD) == 0) {
+                Print("EMAIL and PASSWORD must be set for backend sync. Backend sync disabled.");
+                return 0;
+            }
+            
+            // Perform login if not logged in
+            if (!gLoggedIn) {
+                int loginResult = LoginToBackend();
+                if (loginResult != 1) {
+                    Print("Failed to login to backend. Backend sync disabled.");
+                    return 0;
+                }
+            }
+            
+            // Get Expert UUID by magic number if not found
+            if (!gExpertUUIDFound) {
+                int uuidResult = GetExpertUUID();
+                if (uuidResult != 1) {
+                    Print("Failed to find Expert UUID for magic number ", MAGIC_NUMBER, ". Backend sync disabled.");
+                    return 0;
+                }
+            }
+        }
+        
+        // Check subscription status periodically
+        if (!gAuthenticated || (currentTime - gLastAuthCheck) > gAuthCheckInterval) {
+            int authResult = CheckBackendAuthentication();
+            gLastAuthCheck = currentTime;
+            if (authResult != 1) {
+                Print("Backend authentication failed. EA will continue but backend sync disabled.");
+                return 0;
+            }
+            gAuthenticated = true;
+            Print("Backend authentication successful.");
+        }
+    }
+    
     // EA runs normally if within time range
     Print("EA is running. Current Time: ", TimeToString(currentTime, TIME_SECONDS));
     return 1;
+}
+
+//+------------------------------------------------------------------+
+//| Login to Backend and Get JWT Token                               |
+//+------------------------------------------------------------------+
+int LoginToBackend() {
+    if (StringLen(EMAIL) == 0 || StringLen(PASSWORD) == 0) {
+        Print("EMAIL and PASSWORD must be set for backend login.");
+        return 0;
+    }
+    
+    // Build JSON payload for login
+    string json = "{";
+    json += "\"email\":\"" + EMAIL + "\",";
+    json += "\"password\":\"" + PASSWORD + "\"";
+    json += "}";
+    
+    string url = API_URL + "/api/login/";
+    string headers = "Content-Type: application/json\r\n";
+    
+    char post[];
+    char result[];
+    string result_headers;
+    int timeout = 5000;
+    
+    ArrayResize(post, StringToCharArray(json, post, 0, WHOLE_ARRAY) - 1);
+    StringToCharArray(json, post, 0, WHOLE_ARRAY);
+    
+    // Make POST request
+    int res = WebRequest("POST", url, "", headers, timeout, post, 0, result, result_headers);
+    
+    if (res == 200) {
+        string response = CharArrayToString(result);
+        Print("Login successful: HTTP ", res);
+        
+        // Extract access_token from Backend response
+        // Response format: {"user": {...}, "access_token": "...", "refresh_token": "..."}
+        int tokenStart = StringFind(response, "\"access_token\":\"");
+        if (tokenStart >= 0) {
+            tokenStart += 17; // Length of "access_token":"
+            int tokenEnd = StringFind(response, "\"", tokenStart);
+            if (tokenEnd > tokenStart) {
+                gJWT_TOKEN = StringSubstr(response, tokenStart, tokenEnd - tokenStart);
+                gLoggedIn = true;
+                Print("JWT Token stored successfully.");
+                return 1;
+            }
+        }
+        Print("Failed to extract access_token from login response.");
+        return 0;
+    } else {
+        Print("Login failed: HTTP ", res, " Error: ", GetLastError());
+        string response = CharArrayToString(result);
+        if (DEBUG) Print("Response: ", response);
+        return 0;
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Get Expert UUID by Magic Number and Creator Email                |
+//+------------------------------------------------------------------+
+int GetExpertUUID() {
+    if (StringLen(gJWT_TOKEN) == 0) {
+        Print("JWT_TOKEN not available. Please login first.");
+        return 0;
+    }
+    
+    // Build URL with magic_number and creator_email as query parameters
+    string url = API_URL + "/api/trade-auth/" + IntegerToString(MAGIC_NUMBER) + "/?creator_email=" + CREATOR_EMAIL;
+    string headers = "Authorization: Bearer " + gJWT_TOKEN + "\r\n";
+    
+    char post[];
+    char result[];
+    string result_headers;
+    
+    // Make GET request
+    int res = WebRequest("GET", url, "", headers, 5000, post, 0, result, result_headers);
+    
+    if (res == 200) {
+        string response = CharArrayToString(result);
+        Print("Expert lookup successful: HTTP ", res);
+        
+        // Extract expert.id from JSON response
+        // Response format: {"expert": {"id": "...", ...}, ...}
+        int idStart = StringFind(response, "\"expert\":");
+        if (idStart >= 0) {
+            int uuidStart = StringFind(response, "\"id\":\"", idStart);
+            if (uuidStart >= 0) {
+                uuidStart += 6; // Length of "id":"
+                int uuidEnd = StringFind(response, "\"", uuidStart);
+                if (uuidEnd > uuidStart) {
+                    gEXPERT_UUID = StringSubstr(response, uuidStart, uuidEnd - uuidStart);
+                    gExpertUUIDFound = true;
+                    Print("Expert UUID found and stored: ", gEXPERT_UUID);
+                    return 1;
+                }
+            }
+        }
+        Print("Failed to extract expert UUID from response.");
+        if (DEBUG) Print("Response: ", response);
+        return 0;
+    } else if (res == 410) {
+        Print("Subscription expired: HTTP ", res);
+        ExpertRemove();
+        return 0;
+    } else if (res == 404) {
+        Print("No subscription found for magic number ", MAGIC_NUMBER, " from creator ", CREATOR_EMAIL, ": HTTP ", res);
+        return 0;
+    } else {
+        Print("Expert lookup failed: HTTP ", res, " Error: ", GetLastError());
+        string response = CharArrayToString(result);
+        if (DEBUG) Print("Response: ", response);
+        return 0;
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Check Backend Authentication                                     |
+//+------------------------------------------------------------------+
+int CheckBackendAuthentication() {
+    if (StringLen(gJWT_TOKEN) == 0 || StringLen(gEXPERT_UUID) == 0) {
+        Print("JWT_TOKEN or EXPERT_UUID not set. Backend sync disabled.");
+        return 0;
+    }
+    
+    // Build URL with magic_number and creator_email as query parameters
+    string url = API_URL + "/api/trade-auth/" + IntegerToString(MAGIC_NUMBER) + "/?creator_email=" + CREATOR_EMAIL;
+    string headers = "Authorization: Bearer " + gJWT_TOKEN + "\r\n";
+    
+    char post[];
+    char result[];
+    string result_headers;
+    
+    // Make GET request
+    int res = WebRequest("GET", url, "", headers, 5000, post, 0, result, result_headers);
+    
+    if (res == 200) {
+        Print("Backend authentication successful: HTTP ", res);
+        return 1;
+    } else if (res == 410) {
+        Print("Subscription expired: HTTP ", res);
+        ExpertRemove();
+        return 0;
+    } else {
+        Print("Backend authentication failed: HTTP ", res, " Error: ", GetLastError());
+        return 0;
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Send Trade to Backend                                           |
+//+------------------------------------------------------------------+
+void SendTradeToBackend(int ticket, int orderType, double lotSize, double profit, datetime openTime, datetime closeTime = 0) {
+    if (!ENABLE_BACKEND_SYNC || StringLen(gJWT_TOKEN) == 0 || StringLen(gEXPERT_UUID) == 0) {
+        return;  // Backend sync disabled
+    }
+    
+    string direction = (orderType == OP_BUY) ? "BUY" : "SELL";
+    string ticker = Symbol();
+    
+    // Format datetime for backend (ISO 8601 format)
+    string openTimeStr = TimeToISOString(openTime);
+    string closeTimeStr = "";
+    if (closeTime > 0) closeTimeStr = TimeToISOString(closeTime);
+    
+    // Build JSON payload
+    string json = "{";
+    json += "\"expert\":\"" + gEXPERT_UUID + "\",";
+    json += "\"open_time\":\"" + openTimeStr + "\",";
+    if (StringLen(closeTimeStr) > 0) {
+        json += "\"close_time\":\"" + closeTimeStr + "\",";
+    }
+    json += "\"profit\":" + DoubleToString(profit, 2) + ",";
+    json += "\"lot_size\":" + DoubleToString(lotSize, 2) + ",";
+    json += "\"ticker\":\"" + ticker + "\",";
+    json += "\"direction\":\"" + direction + "\",";
+    json += "\"ticket_number\":" + IntegerToString(ticket);
+    json += "}";
+    
+    string url = API_URL + "/api/trade/";
+    string headers = "Authorization: Bearer " + gJWT_TOKEN + "\r\n";
+    headers += "Content-Type: application/json\r\n";
+    
+    char post[];
+    char result[];
+    string result_headers;
+    int timeout = 5000;
+    
+    ArrayResize(post, StringToCharArray(json, post, 0, WHOLE_ARRAY) - 1);
+    StringToCharArray(json, post, 0, WHOLE_ARRAY);
+    
+    // Make POST request
+    int res = WebRequest("POST", url, "", headers, timeout, post, 0, result, result_headers);
+    
+    if (res == 200 || res == 201) {
+        string response = CharArrayToString(result);
+        Print("Trade sent to backend: Ticket ", ticket, " HTTP ", res);
+        
+        // Extract UUID from response if available
+        if (DEBUG) Print("Response: ", response);
+    } else {
+        Print("Failed to send trade to backend: HTTP ", res, " Error: ", GetLastError());
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Update Trade in Backend                                         |
+//+------------------------------------------------------------------+
+void UpdateTradeInBackend(string tradeUUID, double profit, datetime closeTime) {
+    if (!ENABLE_BACKEND_SYNC || StringLen(gJWT_TOKEN) == 0 || StringLen(tradeUUID) == 0) {
+        return;
+    }
+    
+    string closeTimeStr = TimeToISOString(closeTime);
+    
+    // Build JSON payload for PATCH
+    string json = "{";
+    json += "\"profit\":" + DoubleToString(profit, 2) + ",";
+    json += "\"close_time\":\"" + closeTimeStr + "\"";
+    json += "}";
+    
+    string url = API_URL + "/api/trade/" + tradeUUID + "/";
+    string headers = "Authorization: Bearer " + gJWT_TOKEN + "\r\n";
+    headers += "Content-Type: application/json\r\n";
+    
+    char post[];
+    char result[];
+    string result_headers;
+    int timeout = 5000;
+    
+    ArrayResize(post, StringToCharArray(json, post, 0, WHOLE_ARRAY) - 1);
+    StringToCharArray(json, post, 0, WHOLE_ARRAY);
+    
+    // Make PATCH request
+    int res = WebRequest("PATCH", url, "", headers, timeout, post, 0, result, result_headers);
+    
+    if (res == 200) {
+        Print("Trade updated in backend: UUID ", tradeUUID, " HTTP ", res);
+    } else {
+        Print("Failed to update trade in backend: HTTP ", res, " Error: ", GetLastError());
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Convert DateTime to ISO 8601 String                             |
+//+------------------------------------------------------------------+
+string TimeToISOString(datetime time) {
+    MqlDateTime struct;
+    TimeToStruct(time, struct);
+    
+    string year = IntegerToString(struct.year);
+    string month = StringFormat("%02d", struct.mon);
+    string day = StringFormat("%02d", struct.day);
+    string hour = StringFormat("%02d", struct.hour);
+    string minute = StringFormat("%02d", struct.min);
+    string second = StringFormat("%02d", struct.sec);
+    
+    return year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":" + second + "Z";
 }
 
 int lineOfBestFit( int MAPeriod_trend, int n)
