@@ -198,3 +198,17 @@ GPT - BB Dual Entry EA.mq4
   9. Ability to track profit in order to charge comission
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""22Oct2025
 
+Trend FX EA
+Add email notification to user - to notify user of
+  1.       Send Welcome message to the user at registered email
+  2.       Send Expiration notification to User's email daily 4 days before expiration to notify user that that EA will be expiring and will be renewed authomatically through card onfile.
+  3.       Send Expiration notice to User's email and Trade Pro FX Admins email on date of EA expiration to notify that EA has expired.
+  3B          If renewed -  Send email to user notifying that EA is renewed
+  4.       Include in the drafted email an option for User to unsubscribe to email notification.
+  5.      
+  6. Add Account number...................Completed
+  7. Add EA Expiry date yyyy.mm.dd...........Completed
+  8. Ensure that the indicator lines do not show up on the chart especially during & after running STRATEGY TESTER
+  9. Ability to track profit in order to charge comission
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""28Oct2025
+
